@@ -1,0 +1,6 @@
+ancestry_estimates/training_new/admixture/finches.*
+ancestry_estimates/training_new/plink/finches_pruned.*
+ancestry_estimates/training_new/plink/finches.*
+ancestry_estimates/whole_data_new/admixture/finches.*
+ancestry_estimates/whole_data_new/plink/finches.*
+ancestry_estimates/whole_data_old/finches.*
