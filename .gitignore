@@ -6,5 +6,6 @@ ancestry_estimates/whole_data_new/plink/finches.*
 ancestry_estimates/whole_data_old/finches.*
 tune_trim_ibis/output/
 tune_trim_ibis/plink/
+tune_trim_ibis/trimming/
 tune_trim_ibis/tuning/
 tune_trim_ibis/downsampled_snps.*
