@@ -70,7 +70,6 @@ master = master.drop(columns=["Species"]).rename(columns={"lineage": "Species"})
 master = master[master["meaningful.unique"].isin(coef.ind.to_list())].copy()
 master["Generation"] = master["meaningful.unique"].map(bbs_lines.set_index("meaningful.unique")["Generation"])
 master["fraction_snps_ibd"] = master["meaningful.unique"].map(pivot_seg.set_index("ind")["fraction_snps_ibd"]).fillna(0)
-master["Kinship_Coefficient"] = master["meaningful.unique"].map(coef.set_index("ind")["Kinship_Coefficient"])
 
 
 ############################
@@ -84,36 +83,46 @@ sns.scatterplot(x="Generation", y="fraction_snps_ibd", hue="Species", palette=co
 plt.xlabel("Generations from the Founder")
 plt.ylabel("Fraction of all SNPs in IBD")
 plt.title("IBD Segments Detected with IBIS")
-plt.savefig("tuning_plots/gen_vs_frac_ibd.png", dpi=450, bbox_inches="tight", pad_inches=0)
+sns.despine(top=True, right=True, left=True, bottom=True)
+plt.legend(title=None)
+plt.tight_layout()
+plt.savefig("tuning_plots/gen_vs_frac_ibd.png", dpi=450, bbox_inches="tight", pad_inches=0.05)
 plt.close()
 
 # plot generation vs. distribution of segment lengths
 plt.figure(figsize=(6.4, 4.8))
+seg["Generation"] = seg["ind"].map(bbs_lines.set_index("meaningful.unique")["Generation"])
+seg["Species"] = seg["ind"].map(master.set_index("meaningful.unique")["Species"])
 sns.boxplot(x="Generation", y="genetic_seg_length", hue="Species", palette=color_map_hex, data=seg[~seg["Generation"].isna()])
 plt.xlabel("Generations from the Founder")
 plt.ylabel("Distribution of IBD Segment Lengths (cM)")
 plt.title("IBD Segments Detected with IBIS")
-plt.legend(loc="upper right")
-plt.savefig("tuning_plots/gen_vs_seg_len_dist.png", dpi=450, bbox_inches="tight", pad_inches=0)
+sns.despine(top=True, right=True, left=True, bottom=True)
+plt.legend(title=None, loc="upper right")
+plt.tight_layout()
+plt.savefig("tuning_plots/gen_vs_seg_len_dist.png", dpi=450, bbox_inches="tight", pad_inches=0.05)
 plt.close()
 
 # plot generation vs. kinship coefficient
 plt.figure(figsize=(6.4, 4.8))
+coef["Generation"] = coef["ind"].map(bbs_lines.set_index("meaningful.unique")["Generation"])
 sns.scatterplot(x="Generation", y="Kinship_Coefficient", hue="Degree", data=coef[~coef["Generation"].isna()], s=50, alpha=0.7)
 plt.xlabel("Generations from the Founder (Actual)")
 plt.ylabel("Kinship Coefficient")
 plt.title("Kinship Coefficients from IBIS")
-plt.legend(title="Generation\n  (Inferred)")
-plt.savefig("tuning_plots/gen_vs_kinship.png", dpi=450, bbox_inches="tight", pad_inches=0)
+plt.legend(title="Generation\n  (Inferred)", loc="lower right")
+sns.despine(top=True, right=True, left=True, bottom=True)
+plt.tight_layout()
+plt.savefig("tuning_plots/gen_vs_kinship.png", dpi=450, bbox_inches="tight", pad_inches=0.05)
 plt.close()
 
 ############################
 # first output all segments shared with the founder
-seg.to_pickle("/SSD/reg259/IBIS/output/seg_all_founder.pkl")
-coef.to_pickle("/SSD/reg259/IBIS/output/coef_all_founder.pkl")
+seg.drop(columns=["Generation", "Species"]).to_pickle("output/seg_all_founder.pkl")
+coef.drop(columns=["Generation"]).to_pickle("output/coef_all_founder.pkl")
 
-# then filter for segments above the negative control max error rate
+# then filter for those above the negative control max error rate
 inds_to_keep = pivot_seg[pivot_seg["fraction_snps_ibd"] > neg_max_error]["ind"].to_list()
 seg = seg[seg["ind"].isin(inds_to_keep)].copy()
 seg.reset_index(drop=True, inplace=True)
-seg.to_pickle("/SSD/reg259/IBIS/output/seg_founder_neg_max_error.pkl")
+seg.to_pickle("output/seg_founder_neg_max_error.pkl")
