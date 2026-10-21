@@ -6,8 +6,7 @@ library(patchwork)
 project_dir <- "/SSD/reg259/big_bird_admixture/whole_data_new/admixture"
 k <- 9
 
-# get all the Daphne fortis/scandens records from the master spreadsheet (this already includes the 2022 birds,
-# so the separate 2022 band-records file used by the old script is no longer needed)
+# get all the Daphne fortis/scandens records from the master spreadsheet
 species_order <- c("fortis", "scandens")
 records <- read.csv("/local/storage/all_birds_highcov_lowcov/Finch_Database_V2.csv", header = TRUE, fill = TRUE, na.strings = c("", "NA", "XX"), stringsAsFactors = FALSE)
 records <- records[!duplicated(records$meaningful.unique), ]  # remove duplicates (probably they are all re-captures)

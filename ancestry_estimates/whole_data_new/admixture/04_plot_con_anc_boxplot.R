@@ -4,7 +4,7 @@ library(tidyverse)
 # same as the box plot in whole_data_old/con_anc_dist.R, but for the new K=9 projection
 project_dir <- "/SSD/reg259/big_bird_admixture/whole_data_new/admixture"
 k <- 9
-con_col <- "V2"  # conirostris ancestry cluster for K=9 (see species_ancestry in 02_plot_admixture.R)
+con_col <- "V2"
 
 # get all the Daphne fortis/scandens records from the master spreadsheet
 records <- read.csv("/local/storage/all_birds_highcov_lowcov/Finch_Database_V2.csv", header = TRUE, fill = TRUE, na.strings = c("", "NA", "XX"), stringsAsFactors = FALSE)

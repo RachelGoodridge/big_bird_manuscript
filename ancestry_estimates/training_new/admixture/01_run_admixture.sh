@@ -16,7 +16,6 @@ for k in {2..12}; do
   $ADMIXTURE --cv finches.bed $k -j$THREADS > log${k}.out
 done
 
-# collect the cross-validation error curve (lower is better, but see the note in
-# plot_admixture.R about not just picking the CV-minimum for this kind of panel)
+# collect the cross-validation error curve
 awk '/CV/ {print $3, $4}' log*.out | sed 's/(K=\([0-9]\+\)):/\1/' | sort -n -k1,1 > finches.cv.error
 cat finches.cv.error

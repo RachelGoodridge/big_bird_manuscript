@@ -6,20 +6,10 @@ library(grid)
 library(ggnewscale)
 
 # ── set these once you've picked K and run 01_run_projection.sh <K> ─────────
-# whole_data_new/plink/bird_selection.txt is training's keep_list.txt union every
-# Daphne bird, so this projection's Q file already contains founder/conirostris/
-# fuliginosa/magnirostris/etc. directly -- unlike the old admixture_with_training.R,
-# there's no need to separately pull them in from a training-set Q file anymore.
 project_dir <- "/SSD/reg259/big_bird_admixture/whole_data_new/admixture"
-k <- 9  # <- set to the K you chose from training_new/admixture/finches.cv.error + subset_admix.png
+k <- 9
 
-# the ancestry cluster each named population is dominated by, for this K. to find these,
-# run once with any placeholder mapping, then in R:
-#   data <- read.table(file.path(project_dir, paste0("finches.", k, ".Q")))
-#   fam <- read.table(file.path(project_dir, "finches.fam")); data$ind <- fam$V2
-#   data$Species <- all_records$Species[match(data$ind, all_records$meaningful.unique)]
-#   data %>% group_by(Species) %>% summarise(across(starts_with("V"), \(x) mean(x, na.rm = TRUE))) %>% print(width = Inf)
-# and read off which V-column has the highest mean for each named population.
+# the ancestry cluster each named population is dominated by, for this K.
 species_ancestry <- c(fortis = "V1", scandens = "V6", conirostris = "V2")
 highlight_colors <- c(fortis = "#1C86EE", scandens = "#43CD80", conirostris = "#ff3030dd")
 
@@ -39,9 +29,8 @@ all_records$lineage <- bbs_lines$lineage[match(all_records$meaningful.unique, bb
 all_records <- all_records %>% mutate(lineage = coalesce(lineage, Species))
 all_records <- all_records %>% select(-Species) %>% rename(Species = lineage)
 
-# 01_whole_data_bed.sh now projects every sample in the raw VCF (not just the curated
-# 4330-sample bird_selection.txt), which includes e.g. fortis from Santa Cruz and
-# conirostris from Genovesa. Restrict this plot to exactly the populations of interest.
+# 01_whole_data_bed.sh now projects every sample in the raw VCF
+# Restrict this plot to exactly the populations of interest.
 allowed_combos <- tribble(
   ~Species, ~Island,
   "fortis", "Daphne",
@@ -56,9 +45,6 @@ all_records <- semi_join(all_records, allowed_combos, by = c("Species", "Island"
 # abbreviated x-axis labels; founder gets no label at all (it's a single individual, technically a conirostris)
 display_labels <- c(scandens = "scandens", fortis = "fortis", conirostris = "conirostris",
                      founder = NA, "A line" = "A line", "B line" = "B line", "Big Birds" = "Big Birds")
-
-# italic type reads visually larger/heavier than upright type at the same point size (a standard
-# optical effect, not a font/size bug), so species-name labels are drawn a bit smaller to compensate
 italic_size_factor <- 0.9
 
 # function to create each admixture subplot
@@ -69,14 +55,12 @@ make_admixture_plot <- function(k, show_x = FALSE, spacing = 2, year_cutoff = 19
   data$ind <- fam$V2
   data <- left_join(data, all_records, by = c("ind" = "meaningful.unique"))
 
-  # order populations left to right. difficilis/magnirostris/fuliginosa reference birds
-  # are also present in this Q file if you want to add them to this list
+  # order populations left to right
   populations <- c("scandens", "fortis", "conirostris", "founder", "A line", "B line", "Big Birds")
   data <- data %>% filter(Species %in% populations)
   data <- data %>% mutate(Species = factor(Species, levels = populations))
 
-  # fortis and scandens have far more individuals than the other populations, so for legibility
-  # restrict them to birds first seen before year_cutoff; the rest are left as-is
+  # restrict fortis and scandens to birds first seen before year_cutoff
   data <- data %>% filter(!(Species %in% c("fortis", "scandens")) | First.year < year_cutoff)
 
   # the gap after each population's panel; conirostris sits almost flush against founder
@@ -121,15 +105,12 @@ make_admixture_plot <- function(k, show_x = FALSE, spacing = 2, year_cutoff = 19
     theme_minimal(base_size = 24) + theme(axis.ticks.x = element_blank(), axis.text.y = element_blank(), panel.grid = element_blank(),
     axis.ticks.y = element_blank(), axis.title.x = element_blank(), axis.title.y = element_blank(), legend.position = "none")
 
-  # flag the single founder individual with an asterisk, since it's a conirostris hybrid
-  # sitting flush against the conirostris panel and doesn't get its own x-axis label
+  # flag the single founder individual with an asterisk
   founder_mid <- mean(df_long$RowID[df_long$Species == "founder"], na.rm = TRUE)
   p <- p + annotate("text", x = founder_mid, y = 1.05, label = "*", size = label_size / 2.845276, fontface = "bold") +
     scale_y_continuous(expand = expansion(mult = c(0, 0.12)))
 
-  # add species labels only to the bottom plot. drawn as a manual geom_text layer (rather than the
-  # usual axis.text.x theme) so italic species names can be sized down relative to the upright
-  # population labels -- ggplot2's theme system only allows one font size per axis, not per label
+  # add species labels only to the bottom plot
   if (show_x) {
     species_positions <- df_long %>% group_by(Species) %>% summarise(mid = mean(RowID, na.rm = TRUE), .groups = "drop") %>%
       filter(Species %in% populations) %>% mutate(label = display_labels[as.character(Species)]) %>% filter(!is.na(label)) %>%
@@ -148,17 +129,6 @@ make_admixture_plot <- function(k, show_x = FALSE, spacing = 2, year_cutoff = 19
 }
 
 # build a small standalone plot whose only purpose is to generate a horizontal legend
-# with exactly 4 entries (the 3 highlighted ancestries + "other") -- this avoids showing
-# every one of the K ancestry columns in the real legend, since only 3 of them have a
-# distinct (non-gray) color. its bars are invisible (alpha = 0); only the legend is kept,
-# left-justified via legend.justification so it doesn't sit over the founder's asterisk.
-#
-# the species entries and the "other ancestries" entry are drawn via two independent
-# guide_legend()s (fill for species, colour for "other") combined into one row via
-# legend.box = "horizontal" -- this is the only way to give the species entries their own
-# smaller guide theme (italic_size_factor, to compensate for italic's optical size effect)
-# while "other ancestries" keeps the normal legend text size; ggplot2's theme system only
-# supports one legend.text size per guide, not per key
 legend_text_size <- calc_element("legend.text", theme_void(base_size = 24))$size
 species_df <- data.frame(label = factor(names(species_ancestry), levels = names(species_ancestry)), x = 1, y = 1)
 other_df <- data.frame(label = factor("other ancestries"), x = 1, y = 1)

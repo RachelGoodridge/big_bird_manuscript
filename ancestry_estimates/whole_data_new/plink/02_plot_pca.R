@@ -12,9 +12,7 @@ bbs_lines <- bbs_lines[!duplicated(bbs_lines$meaningful.unique),]
 master$lineage <- bbs_lines$lineage[match(master$meaningful.unique, bbs_lines$meaningful.unique)]
 master <- master %>% mutate(Species = coalesce(lineage, Species)) %>% select(-lineage)
 
-# 01_whole_data_bed.sh projects every sample in the raw VCF (not just the curated
-# 4330-sample bird_selection.txt), which includes e.g. fortis from Santa Cruz and
-# conirostris from Genovesa. Restrict this plot to exactly the populations of interest.
+# Restrict this plot to exactly the populations of interest.
 allowed_combos <- tribble(
   ~Species, ~Island,
   "fortis", "Daphne",

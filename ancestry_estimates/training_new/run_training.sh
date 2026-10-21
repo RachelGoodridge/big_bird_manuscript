@@ -4,10 +4,7 @@ cd "$(dirname "$0")"
 
 # runs the full training pipeline start to finish: shared LD-pruning of the
 # whole VCF, then training-specific relatedness filtering + PCA + ADMIXTURE
-# across k = 2..12, plus the whole-data bed/PCA (doesn't depend on K, so no
-# need to wait). Intended to be kicked off before bed and checked on in the
-# morning, e.g.:
-#   ./run_training.sh > run_training.log 2>&1
+# across k = 2..12, plus the whole-data bed/PCA (doesn't depend on K)
 
 plink/01_subset_and_import.sh
 plink/02_missingness_filter.sh

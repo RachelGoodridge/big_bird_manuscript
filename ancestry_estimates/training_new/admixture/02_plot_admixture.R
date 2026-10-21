@@ -80,10 +80,6 @@ make_admixture_plot <- function(k, show_x = FALSE, spacing = 1) {
 }
 
 # CV-error curve, for reference alongside the visual comparison below.
-# NOTE: with this many known reference populations, the CV-minimum K often
-# under-resolves visually distinct groups (e.g. last time CV bottomed out around
-# K ~ 6 but K = 10-11 was needed to keep every reference population visually
-# distinct) -- use this plot together with subset_admix.png, not instead of it.
 cv <- read.table("finches.cv.error", col.names = c("K", "CV_error"))
 png(file = "cv_error.png", width = 1200, height = 900, res = 200)
 print(ggplot(cv, aes(K, CV_error)) + geom_line() + geom_point() + theme_light() +

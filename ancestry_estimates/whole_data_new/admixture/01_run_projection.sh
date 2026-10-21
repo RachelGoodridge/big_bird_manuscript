@@ -3,7 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 # set this to whatever K you pick from training_new/admixture/finches.cv.error +
-# subset_admix.png (and cv_error.png) once the overnight training run finishes
+# subset_admix.png (and cv_error.png)
 K=9
 
 THREADS=32
