@@ -1,8 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")"
+mkdir -p tuning tuning_plots
+
 PLINK2=/programs/plink2_linux_20230721/plink2
-IBIS=/SSD/reg259/IBIS/ibis/ibis
+IBIS=/SSD/reg259/IBIS/ibis/ibis  # v1.20.9 (commit 435a4fb)
 
 # extract just the inds for tuning
-$PLINK2 --bfile plink/dataset --keep birds_for_tuning.txt --autosome-num 95 --make-bed --out tuning/dataset
+mkdir tuning tuning_plots
+$PLINK2 --bfile plink/dataset --keep dataset/birds_for_tuning.txt --autosome-num 95 --make-bed --out tuning/dataset
 
 # create a file to store the results
 echo "LENGTH,MARKERS,ERROR,POS_MEAN_ERR,NEG_MEAN_ERR,NEG_MAX_ERR" > results.csv
@@ -16,7 +22,7 @@ for LENGTH in 0.25 0.5 1 2 4; do
       $IBIS -b tuning/dataset -threads 16 -mL $LENGTH -mt $MARKERS -er $ERROR -printCoef -noFamID -noConvert -o tuning/finches
 
       # get the error rates
-      ERR_RATES=$(python ibis_error.py)
+      ERR_RATES=$(python scripts/ibis_error.py)
       echo "$LENGTH,$MARKERS,$ERROR,$ERR_RATES" >> results.csv
       echo "finished mL = $LENGTH, mt = $MARKERS, er = $ERROR"
   
@@ -25,4 +31,4 @@ for LENGTH in 0.25 0.5 1 2 4; do
 done
 
 # then compare parameters
-python parameter_optim.py
+python scripts/parameter_optim.py

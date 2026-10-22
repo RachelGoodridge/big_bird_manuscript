@@ -45,6 +45,6 @@ bim.drop(bim.columns[-1], axis=1, inplace=True)
 bim.to_csv("plink/dataset.bim", sep="\t", index=False, header=False)
 
 # also save the chromosome map as a text file
-with open("chr_map.txt", "w") as f:
+with open("dataset/chr_map.txt", "w") as f:
     for key, value in chr_map.items():
         f.write(f"{key} {value}\n")
