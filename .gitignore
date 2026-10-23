@@ -4,6 +4,7 @@ ancestry_estimates/training_new/plink/finches.*
 ancestry_estimates/whole_data_new/admixture/finches.*
 ancestry_estimates/whole_data_new/plink/finches.*
 ancestry_estimates/whole_data_old/finches.*
+figures_ibis/scripts/__pycache__/
 tune_trim_ibis/dataset/downsampled_snps.*
 tune_trim_ibis/output/
 tune_trim_ibis/plink/

@@ -1,0 +1,38 @@
+import matplotlib.pyplot as plt
+import seaborn as sns
+from common import (COLOR_MAP, FOCAL_SPECIES, GROUPS, IBD_LABEL, format_year_axis, founder_ibd_per_bird,
+                    load_master, order_groups, save_figure, set_plot_theme, style_legend, yearly_summary)
+
+set_plot_theme()
+
+# fraction of SNPs in IBD with the founder for every bird, and per year averages / carrier frequencies
+master = load_master()
+birds = founder_ibd_per_bird(master)
+summary = order_groups(yearly_summary(birds), FOCAL_SPECIES, by=["Year", "Species"])
+birds = order_groups(birds, GROUPS)
+
+
+############################
+# three panels: (a) individual birds, (b) yearly mean, (c) IBD segment carrier frequency
+fig, (ax_a, ax_b, ax_c) = plt.subplots(1, 3, figsize=(18, 4.875))
+
+# (a) individual scatter points
+sns.scatterplot(x="Year", y="fraction_snps_ibd", hue="Species", palette=COLOR_MAP, data=birds, s=35, alpha=0.75, ax=ax_a, zorder=2)
+ax_a.set_ylabel(IBD_LABEL)
+ax_a.set_ylim(-0.02, 1.0)
+
+# (b) average lines and (c) carrier frequency
+for ax, y_col, y_label, y_lim in [(ax_b, "fraction_snps_ibd_mean", f"Mean {IBD_LABEL}", (-0.002, 0.077)),
+                                  (ax_c, "ibd_fraction", "IBD Segment Carrier Frequency", (-0.02, 0.77))]:
+    sns.lineplot(x="Year", y=y_col, hue="Species", palette=COLOR_MAP, data=summary, linewidth=1.5, ax=ax, zorder=2)
+    sns.scatterplot(x="Year", y=y_col, hue="Species", palette=COLOR_MAP, edgecolor="none", data=summary, s=25, ax=ax, zorder=3, legend=False)
+    ax.set_ylabel(y_label)
+    ax.set_ylim(*y_lim)
+
+for ax in [ax_a, ax_b, ax_c]:
+    format_year_axis(ax)
+    style_legend(ax, loc="upper left")
+    sns.despine(top=True, right=True, left=False, bottom=False, ax=ax)
+
+plt.tight_layout()
+save_figure("main/figure2a-c.png")

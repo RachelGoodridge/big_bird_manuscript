@@ -96,9 +96,9 @@ def count_snps(segs, bim, chrom="chrom", start="phys_start_pos", end="phys_end_p
     return counts
 
 
-def load_chr_map():
+def load_chr_map(path="dataset/chr_map.txt"):
     """Map from the integer chromosome codes used by IBIS to chromosome names (without "chr")."""
-    chr_map = pd.read_csv("dataset/chr_map.txt", sep=" ", header=None, names=["Key", "Value"])
+    chr_map = pd.read_csv(path, sep=" ", header=None, names=["Key", "Value"])
     chr_map["Key"] = chr_map["Key"].str.replace("chr", "")
     return chr_map.set_index("Value")["Key"].to_dict()
 
