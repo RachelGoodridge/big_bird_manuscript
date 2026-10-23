@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from common import assign_y_levels, count_snps, load_chr_map, read_bim, set_plot_theme
+from common import assign_y_levels, load_chr_map, read_bim, set_plot_theme
 
 set_plot_theme()
 chr_dict = load_chr_map()
@@ -12,14 +12,8 @@ seg_untrim = pd.read_pickle("output/seg_founder_neg_max_error.pkl")
 seg_untrim["length_Mb"] = (seg_untrim["phys_end_pos"] - seg_untrim["phys_start_pos"]) / 1e6
 num_ind = seg_untrim.ind.nunique()
 
-# get the dataset after trimming (bed back to 1-based positions) and convert positions to Mb
-trim_seg = pd.read_csv("trimming/trimmed.bed", sep="\t", header=None, names=["chrom", "phys_start_pos", "phys_end_pos", "name"])
-trim_seg["chrom"] = trim_seg["chrom"].str.replace("chr", "").astype(int)
-trim_seg["phys_start_pos"] += 1
-trim_seg["length_Mb"] = (trim_seg["phys_end_pos"] - trim_seg["phys_start_pos"]) / 1e6
-trim_seg["SNP_count"] = count_snps(trim_seg, bim)
-trim_seg["phys_start_pos"] /= 1e6
-trim_seg["phys_end_pos"] /= 1e6
+# get the dataset after trimming (positions in Mb)
+trim_seg = pd.read_pickle("output/trim_seg_founder_neg_max_error.pkl")
 
 # setup the plot
 fig, axes = plt.subplots(6, 5, figsize=(20, 12), sharex=False, sharey=True)
@@ -46,13 +40,10 @@ plt.close()
 ############################
 # Calculate SNPs per Mb before and after trimming
 seg_untrim["SNP_per_Mb"] = seg_untrim["SNP_count"] / seg_untrim["length_Mb"]
-trim_seg["SNP_per_Mb"] = trim_seg["SNP_count"] / trim_seg["length_Mb"]
 
 # Print summary statistics
 print("SNPs per Mb before trimming:")
 print(seg_untrim["SNP_per_Mb"].describe())
-
-trim_seg = trim_seg[trim_seg["SNP_count"]>1].copy()
 print("\nSNPs per Mb after trimming:")
 print(trim_seg["SNP_per_Mb"].describe())
 
@@ -77,11 +68,3 @@ sns.despine(top=True, right=True, left=True, bottom=True, ax=axes[1])
 plt.tight_layout()
 plt.savefig("trimming_plots/SNPs_per_Mb.png", dpi=450, bbox_inches="tight", pad_inches=0.05)
 plt.close()
-
-
-############################
-# output the trimmed segments
-trim_seg["ind"] = trim_seg["name"].map(seg_untrim["ind"])
-trim_seg.drop("name", axis=1, inplace=True)
-trim_seg.reset_index(drop=True, inplace=True)
-trim_seg.to_pickle("output/trim_seg_founder_neg_max_error.pkl")

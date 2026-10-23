@@ -5,8 +5,11 @@ import numpy as np
 import pandas as pd
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
+import seaborn as sns
 from matplotlib.colors import Normalize
+from matplotlib.lines import Line2D
 from pandas.api.types import CategoricalDtype
+from scipy import stats
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
@@ -20,7 +23,7 @@ DATA = f"{FIGURES}/data"
 _spec = importlib.util.spec_from_file_location("ibis_common", f"{IBIS}/scripts/common.py")
 sys.modules["ibis_common"] = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(sys.modules["ibis_common"])
-from ibis_common import COLOR_MAP, load_chr_map, load_master, read_bim, set_plot_theme
+from ibis_common import COLOR_MAP, FOUNDER, load_chr_map, load_master, negative_controls, read_bim, set_plot_theme
 
 # axis label for the fraction of SNPs in IBD with the founder
 IBD_LABEL = "Genome-wide Proportion of SNPs in IBD"
@@ -108,6 +111,109 @@ def add_bill_pcs(df):
     return df
 
 
+def add_body_pc(df):
+    """First PC of standardized weight, wing, and tarsus, signed so larger values mean heavier birds."""
+    pc = PCA(n_components=1).fit_transform(StandardScaler().fit_transform(df[["weight", "wing", "tarsus"]]))[:, 0]
+    df["PC(Body Size)"] = pc * np.sign(np.corrcoef(pc, df["weight"])[0, 1])
+    return df
+
+
+############################ allometry ############################
+def load_allometry_birds():
+    """Daphne birds in the IBIS run, the founder, and Española conirostris, with IBD fraction and body / beak size PCs."""
+    master = load_master(island=None)
+    ibis_birds = set(load_founder_coef()["ind"]) | {FOUNDER}
+    daphne = (master["Island"] == "Daphne") & master["meaningful.unique"].isin(ibis_birds)
+    conirostris = (master["Island"] == "Espanola") & (master["Species"] == "conirostris")
+    birds = master[daphne | conirostris].dropna(subset=["bill.length", "bill.depth", "bill.width", "weight", "wing", "tarsus"]).copy()
+
+    # IBD with the founder (0 for conirostris and the founder, which were not tested)
+    ibd = founder_ibd_per_bird(load_master()).set_index("ind")["fraction_snps_ibd"]
+    birds["fraction_snps_ibd"] = birds["meaningful.unique"].map(ibd).fillna(0)
+
+    # PCs fit on all of these birds, so both allometry figures share the same axes
+    return add_bill_pcs(add_body_pc(birds))
+
+
+def plot_allometry(birds, fit_birds, fit_label, path):
+    """Beak size vs. body size (outline width = fraction of SNPs in IBD) with a regression fit to fit_birds."""
+    birds = birds.sort_values(by="fraction_snps_ibd")
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.scatter(birds["PC(Body Size)"], birds["PC(Beak Size)"], c=birds["Species"].map(COLOR_MAP), alpha=0.5, edgecolors="black", linewidths=birds["fraction_snps_ibd"])
+
+    fit = stats.linregress(fit_birds["PC(Body Size)"], fit_birds["PC(Beak Size)"])
+    x = np.sort(fit_birds["PC(Body Size)"])
+    ax.plot(x, fit.intercept + fit.slope * x, color="black", linewidth=2)
+    ax.text(0.05, 0.98, fit_label, transform=ax.transAxes, ha="left", va="top")
+    ax.text(0.05, 0.94, f"$R^2$ = {fit.rvalue ** 2:.3f}", transform=ax.transAxes, ha="left", va="top")
+
+    handles = [Line2D([], [], color=color, marker="o", linestyle="None", markersize=6, label=s) for s, color in COLOR_MAP.items() if s in set(birds["Species"])]
+    style_legend(ax, handles=handles, bbox_to_anchor=(1, 1), loc="upper left")
+    ax.set_xlabel("PC(Body Size)")
+    ax.set_ylabel("PC(Beak Size)")
+    sns.despine(top=True, right=True, ax=ax)
+    plt.tight_layout()
+    save_figure(path, fig)
+
+
+############################ negative controls as founders ############################
+def control_yearly_summary(master):
+    """Carrier frequency and mean fraction of SNPs in IBD among fortis / scandens alive each year, for the founder and each
+    negative control (each treated as a founder, see tune_trim_ibis/05_control_birds.sh)."""
+    # fortis and scandens alive each year in the IBIS run
+    birds = add_bird_info(pd.DataFrame({"ind": list(load_founder_coef()["ind"]) + [FOUNDER]}), master)
+    alive = expand_years_alive(birds)
+    alive = alive[alive["Species"].isin(FOCAL_SPECIES)].drop(columns="Year").rename(columns={"Year_alive": "Year"})
+    n_alive = alive.groupby(["Year", "Species"]).size()
+
+    # fraction of SNPs each bird shares in IBD with each focal bird, for every year the bird was alive
+    segs = pd.read_pickle(f"{IBIS}/output/trim_seg_controls.pkl")
+    pairs = (segs.groupby(["focal", "partner"])["SNP_count"].sum() / len(load_bim())).rename("fraction_snps_ibd").reset_index()
+    pairs = expand_years_alive(add_bird_info(pairs, master, col="partner"))
+    pairs = pairs[pairs["Species"].isin(FOCAL_SPECIES)].drop(columns="Year").rename(columns={"Year_alive": "Year"})
+    sums = pairs.groupby(["focal", "Year", "Species"])["fraction_snps_ibd"].agg(n_ibd="count", ibd_sum="sum")
+
+    # every focal bird x year x species, excluding the focal bird itself from the number alive
+    focal_birds = sorted(set(negative_controls(master)["meaningful.unique"]) & set(birds["ind"])) + [FOUNDER]
+    summary = pd.MultiIndex.from_product([focal_birds, n_alive.index.get_level_values("Year").unique().sort_values(), FOCAL_SPECIES],
+                                         names=["focal", "Year", "Species"]).to_frame(index=False)
+    summary = summary.join(sums, on=["focal", "Year", "Species"]).fillna({"n_ibd": 0, "ibd_sum": 0})
+    is_self = summary.set_index(["focal", "Year", "Species"]).index.isin(alive.set_index(["ind", "Year", "Species"]).index)
+    summary["n_alive"] = summary.join(n_alive.rename("n"), on=["Year", "Species"])["n"].fillna(0) - is_self
+    summary = summary[summary["n_alive"] > 0].copy()
+    summary["carrier_freq"] = summary["n_ibd"] / summary["n_alive"]
+    summary["mean_ibd"] = summary["ibd_sum"] / summary["n_alive"]
+    summary["is_founder"] = summary["focal"] == FOUNDER
+    return summary
+
+
+def plot_controls(summary, y_col, y_label, path):
+    """Each negative control (thin), their mean (thick), and the founder (points) over time for fortis and scandens."""
+    colors = {"fortis": {"founder": "#1C86EE", "mean": "#67abed", "control": "#B2CFEC"},
+              "scandens": {"founder": "#43CD80", "mean": "#84ddac", "control": "#C6EDD8"}}
+    fig, ax = plt.subplots(figsize=(8.5, 4.8))
+    for spp in FOCAL_SPECIES:
+        sub = summary[summary["Species"] == spp]
+        controls = sub[~sub["is_founder"]]
+        for _, bird in controls.groupby("focal"):
+            ax.plot(bird["Year"], bird[y_col], color=colors[spp]["control"], linewidth=0.8, alpha=0.8, zorder=1)
+        mean = controls.groupby("Year")[y_col].mean()
+        ax.plot(mean.index, mean.values, color=colors[spp]["mean"], linewidth=2, zorder=4)
+        founder = sub[sub["is_founder"]]
+        ax.plot(founder["Year"], founder[y_col], color=colors[spp]["founder"], linewidth=2, marker="o", markersize=3.5, zorder=2)
+
+    handles = [Line2D([0], [0], color=colors[spp][kind], lw=2 if kind != "control" else 0.8, marker="o" if kind == "founder" else None, markersize=3,
+                      label=rf"$\it{{{spp}}}$ – {label}")
+               for kind, label in [("founder", "founder"), ("mean", "mean of controls"), ("control", "each control")] for spp in FOCAL_SPECIES]
+    style_legend(ax, handles=handles, loc="upper left", bbox_to_anchor=(1.02, 1.0), borderaxespad=0)
+    ax.set_ylabel(y_label)
+    format_year_axis(ax)
+    ax.set_xlim(1973, 2025)
+    sns.despine(top=True, right=True, ax=ax)
+    plt.tight_layout()
+    save_figure(path, fig)
+
+
 ############################ IBD along the genome ############################
 def chromosome_lengths(bim):
     """Position of the last SNP on each chromosome (Mb)."""
@@ -143,6 +249,59 @@ def ibd_frequency_profiles(master, year, chrom_lengths, bin_size=0.1):
     n_ind = alive_in(load_founder_coef()[["ind"]].copy())["Species"].value_counts()
     return {(species, chrom): compute_freq_profile(segs, species, chrom, chrom_lengths[chrom], n_ind, bin_size)
             for species in FOCAL_SPECIES for chrom in chrom_lengths.index}
+
+
+# genomic windows for IBD frequencies: non-overlapping, and a segment covers a window if it overlaps at least 80% of it
+WINDOW_SIZE = 80_000
+WINDOW_COVERAGE = 0.8
+
+
+def make_windows(bim):
+    """Non-overlapping windows from the first to the last SNP of each chromosome (the last window may be shorter), with names chrom_index."""
+    windows = []
+    for chrom, pos in bim.groupby("chrom")["pos"]:
+        starts = np.arange(pos.min(), pos.max(), WINDOW_SIZE)
+        windows.append(pd.DataFrame({"chrom": chrom, "start": starts, "end": np.minimum(starts + WINDOW_SIZE, pos.max())}))
+    windows = pd.concat(windows, ignore_index=True)
+    windows["name"] = windows["chrom"].astype(str) + "_" + windows.groupby("chrom").cumcount().astype(str)
+    return windows
+
+
+def ibd_window_frequencies(master):
+    """Proportion of fortis / scandens alive each year with a trimmed IBD segment covering each window (year x window table per species)."""
+    windows = make_windows(load_bim())
+
+    # trimmed segments of fortis and scandens (positions in bp), and the birds of each species alive each year
+    seg = add_bird_info(load_trimmed_segments(), master)
+    seg = seg[seg["Species"].isin(FOCAL_SPECIES)].reset_index(drop=True)
+    starts_bp, ends_bp = np.rint(seg["phys_start_pos"] * 1e6), np.rint(seg["phys_end_pos"] * 1e6)
+    alive = expand_years_alive(founder_ibd_per_bird(master))
+    n_alive = alive[alive["Species"].isin(FOCAL_SPECIES)].groupby(["Species", "Year_alive"]).size()
+
+    # the (contiguous) range of windows each segment covers
+    seg["first"], seg["last"] = 0, -1
+    for chrom, win in windows.groupby("chrom"):
+        win_starts, win_ends, offset = win["start"].to_numpy(), win["end"].to_numpy(), win.index[0]
+        for k in np.flatnonzero(seg["chrom"] == chrom):
+            lo, hi = np.searchsorted(win_ends, starts_bp[k], side="right"), np.searchsorted(win_starts, ends_bp[k], side="left")
+            overlap = np.minimum(ends_bp[k], win_ends[lo:hi]) - np.maximum(starts_bp[k], win_starts[lo:hi])
+            covered = np.flatnonzero(overlap >= WINDOW_COVERAGE * (win_ends[lo:hi] - win_starts[lo:hi]))
+            if len(covered):
+                seg.loc[k, ["first", "last"]] = offset + lo + covered[0], offset + lo + covered[-1]
+
+    # count covering segments per window for every year each bird was alive (difference array over windows)
+    seg_years = expand_years_alive(seg[seg["last"] >= 0])
+    years = sorted(seg_years["Year_alive"].unique())
+    freqs = {}
+    for spp in FOCAL_SPECIES:
+        sub = seg_years[seg_years["Species"] == spp]
+        year_idx = np.searchsorted(years, sub["Year_alive"].astype(int))
+        counts = np.zeros((len(years), len(windows) + 1))
+        np.add.at(counts, (year_idx, sub["first"].to_numpy(dtype=int)), 1)
+        np.add.at(counts, (year_idx, sub["last"].to_numpy(dtype=int) + 1), -1)
+        counts = np.cumsum(counts, axis=1)[:, :-1] / n_alive[spp].reindex(years).to_numpy()[:, None]
+        freqs[spp] = pd.DataFrame(counts, index=years, columns=windows["name"])
+    return freqs, windows
 
 
 def set_genome_plot_theme():
@@ -193,7 +352,7 @@ def degree_cutoffs(coef, degrees):
 def format_year_axis(ax):
     ax.set_xlabel(None)
     ax.set_xticks(np.arange(1975, 2025, 5))
-    ax.set_xlim(1978, 2024)
+    ax.set_xlim(1977, 2024)
 
 
 # load the drought survival list (Erik's published table) for Daphne fortis, with IBD and beak size

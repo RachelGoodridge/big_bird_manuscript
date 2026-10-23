@@ -6,8 +6,7 @@ from scipy import linalg
 from scipy.optimize import minimize_scalar
 from scipy.stats import mannwhitneyu, chi2
 from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA
-from common import COLOR_MAP, add_bill_pcs, load_bim, load_chromosomes, load_founder_coef, load_master, load_trimmed_segments, save_figure, set_plot_theme
+from common import COLOR_MAP, add_bill_pcs, add_body_pc, load_bim, load_chromosomes, load_founder_coef, load_master, load_trimmed_segments, save_figure, set_plot_theme
 
 set_plot_theme()
 spp = "scandens"
@@ -42,10 +41,7 @@ master2["background_IBD"] = master2["meaningful.unique"].map(background_IBD).fil
 master2 = master2.dropna(subset=["weight", "wing", "tarsus", "bill.length", "bill.depth", "bill.width"])
 
 # PCA on body size (signed so larger values mean heavier birds) and on bill dimensions
-body_scaled = StandardScaler().fit_transform(master2[["weight", "wing", "tarsus"]])
-master2["PC(Body Size)"] = PCA(n_components=1).fit_transform(body_scaled)[:, 0]
-master2["PC(Body Size)"] *= np.sign(np.corrcoef(master2["PC(Body Size)"], master2["weight"])[0, 1])
-master2 = add_bill_pcs(master2)
+master2 = add_bill_pcs(add_body_pc(master2))
 
 # beak volume proxy : body mass, log transform to create normal distribution, and then standardize to remove the unit problem
 beak_volume = master2["bill.length"] * master2["bill.depth"] * master2["bill.width"]

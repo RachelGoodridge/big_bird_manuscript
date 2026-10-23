@@ -50,7 +50,9 @@ for spp in FOCAL_SPECIES:
 
 ax.set_ylabel("Fraction of the Founder's Genome Retained")
 format_year_axis(ax)
-style_legend(ax, loc="upper left")
+ax.set_xlim(1983, 2024)
+ax.set_ylim(-0.12, 1.05)
+style_legend(ax, loc="lower right")
 sns.despine(top=True, right=True, left=False, bottom=False, ax=ax)
 
 plt.tight_layout()

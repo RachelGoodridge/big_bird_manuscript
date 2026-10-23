@@ -23,6 +23,7 @@ sns.scatterplot(x="Year", y="spp_fraction", hue="Species", palette=COLOR_MAP, ed
 
 ax.set_ylabel("Relative Species Abundance")
 format_year_axis(ax)
+ax.set_xlim(1978, 2024)
 ax.set_ylim(-0.02, 0.88)
 
 # mark the founder's arrival (1981) as a star sitting on the x-axis
@@ -39,7 +40,7 @@ for s in ["A line", "B line", "Big Birds"]:
     ax_inset.scatter(d["Year"].values, d["spp_fraction"].values, color=COLOR_MAP[s], s=10, zorder=3)
 
 ax_inset.set_xticks(np.arange(1980, 2025, 10))
-ax_inset.set_xlim(1985, 2024)
+ax_inset.set_xlim(1986, 2024)
 ax_inset.set_yticks(np.arange(0, 0.08, 0.02))
 ax_inset.set_ylim(-0.002, 0.065)
 ax_inset.tick_params(labelsize=6.5, length=0, colors="black")

@@ -29,11 +29,12 @@ def set_plot_theme():
     plt.rcParams.update(PLOT_THEME)
 
 
-def load_master():
-    """Daphne birds from the master database with missing first years filled and the newest lineage classifications."""
+def load_master(island="Daphne"):
+    """Birds from the master database (one island, or all if None) with missing first years filled and the newest lineage classifications."""
     master = pd.read_csv(MASTER_DB)
     master.drop_duplicates(subset=["meaningful.unique"], inplace=True)
-    master = master[master["Island"] == "Daphne"].copy()
+    if island is not None:
+        master = master[master["Island"] == island].copy()
 
     # fill in missing years with the minimum year, year born, or last year
     master["First.year"] = master["First.year"].fillna(master["First.year.min"])
@@ -94,6 +95,46 @@ def count_snps(segs, bim, chrom="chrom", start="phys_start_pos", end="phys_end_p
         pos = positions.get(c, np.array([]))
         counts[idx] = np.searchsorted(pos, ends[idx], side="right") - np.searchsorted(pos, starts[idx], side="left")
     return counts
+
+
+def write_bed(regions, path):
+    """Write regions (1-based, inclusive) to a sorted bed file (0-based, half-open) with chromosomes as chr<IBIS code>."""
+    bed = pd.DataFrame({"chrom": "chr" + regions["chrom"].astype(str), "start": regions["phys_start_pos"] - 1, "end": regions["phys_end_pos"]})
+    bed.sort_values(by=["chrom", "start", "end"]).to_csv(path, sep="\t", index=False, header=False)
+
+
+def read_bed(path):
+    """Read a bed file written by write_bed back to IBIS positions (1-based, inclusive) and integer chromosomes."""
+    regions = pd.read_csv(path, sep="\t", header=None, names=["chrom", "phys_start_pos", "phys_end_pos"])
+    regions["chrom"] = regions["chrom"].str.replace("chr", "").astype(int)
+    regions["phys_start_pos"] += 1
+    return regions
+
+
+def high_coverage_regions(segs, min_count):
+    """Merged regions covered by more than min_count segments (same as bedtools genomecov + merge; positions 1-based, inclusive)."""
+    regions = []
+    for chrom, chrom_segs in segs.groupby("chrom"):
+        # coverage between consecutive segment ends (half-open coordinates)
+        starts, ends = np.sort(chrom_segs["phys_start_pos"].to_numpy() - 1), np.sort(chrom_segs["phys_end_pos"].to_numpy())
+        breaks = np.unique(np.concatenate([starts, ends]))
+        depth = np.searchsorted(starts, breaks[:-1], side="right") - np.searchsorted(ends, breaks[:-1], side="right")
+
+        # merge consecutive stretches above the threshold
+        high = np.concatenate([[False], depth > min_count, [False]])
+        run_starts, run_ends = np.flatnonzero(~high[:-1] & high[1:]), np.flatnonzero(high[:-1] & ~high[1:])
+        regions.append(pd.DataFrame({"chrom": chrom, "phys_start_pos": breaks[run_starts] + 1, "phys_end_pos": breaks[run_ends]}))
+    return pd.concat(regions, ignore_index=True)
+
+
+def subtract_regions(segs, regions):
+    """Remove regions from segments, splitting any segment that spans a region (same as bedtools subtract; positions 1-based, inclusive)."""
+    for _, region in regions.iterrows():
+        hit = (segs["chrom"] == region["chrom"]) & (segs["phys_start_pos"] <= region["phys_end_pos"]) & (segs["phys_end_pos"] >= region["phys_start_pos"])
+        left = segs[hit & (segs["phys_start_pos"] < region["phys_start_pos"])].assign(phys_end_pos=region["phys_start_pos"] - 1)
+        right = segs[hit & (segs["phys_end_pos"] > region["phys_end_pos"])].assign(phys_start_pos=region["phys_end_pos"] + 1)
+        segs = pd.concat([segs[~hit], left, right])
+    return segs.sort_index(kind="stable")
 
 
 def load_chr_map(path="dataset/chr_map.txt"):
