@@ -39,7 +39,7 @@ frac_genome = pd.merge(frac_genome, yearly_summary(founder_ibd_per_bird(master))
 
 
 ########################### CREATE PLOT ###########################
-fig, ax = plt.subplots(1, 1, figsize=(6, 4.875))
+fig, ax = plt.subplots(1, 1, figsize=(7.2, 6))
 for spp in FOCAL_SPECIES:
     sub = frac_genome[frac_genome["Species"] == spp]
     sns.lineplot(x="Year", y="frac", data=sub, label=spp, color=COLOR_MAP[spp], ax=ax, linewidth=1.5, zorder=2)
@@ -51,7 +51,7 @@ for spp in FOCAL_SPECIES:
 ax.set_ylabel("Fraction of the Founder's Genome Retained")
 format_year_axis(ax)
 ax.set_xlim(1983, 2024)
-ax.set_ylim(-0.12, 1.05)
+ax.set_ylim(-0.1, 1.05)
 style_legend(ax, loc="lower right")
 sns.despine(top=True, right=True, left=False, bottom=False, ax=ax)
 

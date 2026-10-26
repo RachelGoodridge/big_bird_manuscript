@@ -29,13 +29,12 @@ for j, spp in enumerate(FOCAL_SPECIES):
         ax.scatter(np.full(len(outliers), x), outliers, s=4, color=color, alpha=0.6, linewidth=0)
 
 ax.set_xticks(range(len(years)))
-ax.set_xticklabels(years, rotation=90, fontsize=11)
+ax.set_xticklabels(years, rotation=90)
 ax.set_xlim(-0.6, len(years) - 0.4)
-ax.set_ylabel("IBD Segment Length (Mb)", fontsize=12)
-ax.tick_params(axis="y", labelsize=11)
+ax.set_ylabel("IBD Segment Length (Mb)")
 ax.grid(axis="x", visible=False)
 style_legend(ax, handles=[Patch(facecolor=to_rgba(COLOR_MAP[s], 0.4), edgecolor=COLOR_MAP[s], label=s) for s in FOCAL_SPECIES],
-             loc="center left", bbox_to_anchor=(1.01, 0.5))
+             loc="upper right")
 sns.despine(top=True, right=True, left=True, bottom=True, ax=ax)
 
 plt.tight_layout()

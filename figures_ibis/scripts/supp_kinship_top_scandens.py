@@ -22,7 +22,7 @@ subset = coef[coef["Degree"].isin([0, 1, 2, 3, 4])].copy()
 # cutoffs between 2nd/3rd and 3rd/4th degree relatives
 cutoffs = degree_cutoffs(coef, [2, 3])
 
-plt.figure(figsize=(6.4, 4.8))
+plt.figure(figsize=(7.2, 6))
 for _, bird in top_scandens.iterrows():
     # kinship of this bird with the founder and his descendants
     rel = subset[(subset["Individual1"] == bird["ind"]) | (subset["Individual2"] == bird["ind"])].copy()

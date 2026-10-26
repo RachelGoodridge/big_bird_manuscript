@@ -27,6 +27,7 @@ from ibis_common import COLOR_MAP, FOUNDER, load_chr_map, load_master, negative_
 
 # axis label for the fraction of SNPs in IBD with the founder
 IBD_LABEL = "Genome-wide Proportion of SNPs in IBD"
+MEAN_IBD_LABEL = "Mean Proportion of SNPs in IBD"
 
 # groups of birds shown in the figures
 FOCAL_SPECIES = ["fortis", "scandens"]
@@ -144,8 +145,8 @@ def plot_allometry(birds, fit_birds, fit_label, path):
     fit = stats.linregress(fit_birds["PC(Body Size)"], fit_birds["PC(Beak Size)"])
     x = np.sort(fit_birds["PC(Body Size)"])
     ax.plot(x, fit.intercept + fit.slope * x, color="black", linewidth=2)
-    ax.text(0.05, 0.98, fit_label, transform=ax.transAxes, ha="left", va="top")
-    ax.text(0.05, 0.94, f"$R^2$ = {fit.rvalue ** 2:.3f}", transform=ax.transAxes, ha="left", va="top")
+    ax.text(0.05, 0.99, fit_label, transform=ax.transAxes, ha="left", va="top", fontsize=11.5)
+    ax.text(0.05, 0.94, f"$R^2$ = {fit.rvalue ** 2:.3f}", transform=ax.transAxes, ha="left", va="top", fontsize=11.5)
 
     handles = [Line2D([], [], color=color, marker="o", linestyle="None", markersize=6, label=s) for s, color in COLOR_MAP.items() if s in set(birds["Species"])]
     style_legend(ax, handles=handles, bbox_to_anchor=(1, 1), loc="upper left")
@@ -187,11 +188,10 @@ def control_yearly_summary(master):
     return summary
 
 
-def plot_controls(summary, y_col, y_label, path):
-    """Each negative control (thin), their mean (thick), and the founder (points) over time for fortis and scandens."""
+def plot_controls(ax, summary, y_col, y_label):
+    """Each negative control (thin), their mean (thick), and the founder (points) over time for fortis and scandens; returns legend handles."""
     colors = {"fortis": {"founder": "#1C86EE", "mean": "#67abed", "control": "#B2CFEC"},
               "scandens": {"founder": "#43CD80", "mean": "#84ddac", "control": "#C6EDD8"}}
-    fig, ax = plt.subplots(figsize=(8.5, 4.8))
     for spp in FOCAL_SPECIES:
         sub = summary[summary["Species"] == spp]
         controls = sub[~sub["is_founder"]]
@@ -205,13 +205,12 @@ def plot_controls(summary, y_col, y_label, path):
     handles = [Line2D([0], [0], color=colors[spp][kind], lw=2 if kind != "control" else 0.8, marker="o" if kind == "founder" else None, markersize=3,
                       label=rf"$\it{{{spp}}}$ – {label}")
                for kind, label in [("founder", "founder"), ("mean", "mean of controls"), ("control", "each control")] for spp in FOCAL_SPECIES]
-    style_legend(ax, handles=handles, loc="upper left", bbox_to_anchor=(1.02, 1.0), borderaxespad=0)
     ax.set_ylabel(y_label)
     format_year_axis(ax)
-    ax.set_xlim(1973, 2025)
+    ax.set_xlim(1973, 2024)
+    ax.set_xticks(range(1975, 2025, 5))
     sns.despine(top=True, right=True, ax=ax)
-    plt.tight_layout()
-    save_figure(path, fig)
+    return handles
 
 
 ############################ IBD along the genome ############################
@@ -252,7 +251,7 @@ def ibd_frequency_profiles(master, year, chrom_lengths, bin_size=0.1):
 
 
 # genomic windows for IBD frequencies: non-overlapping, and a segment covers a window if it overlaps at least 80% of it
-WINDOW_SIZE = 80_000
+WINDOW_SIZE = 100_000
 WINDOW_COVERAGE = 0.8
 
 
@@ -314,11 +313,11 @@ def add_freq_colorbar(fig, rect, cmap, vmax, label="IBD segment frequency"):
     sm = cm.ScalarMappable(cmap=cmap, norm=Normalize(vmin=0, vmax=vmax))
     sm.set_array([])
     cb = fig.colorbar(sm, cax=fig.add_axes(rect))
-    cb.ax.tick_params(labelsize=13)
+    cb.ax.tick_params(labelsize=17)
     tick_vals = np.linspace(0, vmax, 5)
     cb.set_ticks(tick_vals)
     cb.set_ticklabels([f"{v:.2f}" for v in tick_vals])
-    cb.set_label(label, fontsize=14, labelpad=10)
+    cb.set_label(label, fontsize=19, labelpad=10)
     return cb
 
 

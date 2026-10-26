@@ -30,12 +30,12 @@ def plot_panel(ax, y_col, show_legend):
     sns.scatterplot(x="fraction_snps_ibd", y=y_col, hue="Species", palette=COLOR_MAP, data=birds, s=25, alpha=0.75, ax=ax, zorder=2, legend=show_legend)
 
     # linear fit and stats for fortis and scandens
-    for y_text, (species, group) in zip([1.05, 1.01], birds[birds["Species"].isin(FOCAL_SPECIES)].groupby("Species", observed=True)):
+    for y_text, (species, group) in zip([1.11, 1.03], birds[birds["Species"].isin(FOCAL_SPECIES)].groupby("Species", observed=True)):
         fit = stats.linregress(group["fraction_snps_ibd"], group[y_col])
         x_sorted = np.sort(group["fraction_snps_ibd"])
         ax.plot(x_sorted, fit.intercept + fit.slope * x_sorted, color=COLOR_MAP[species], linewidth=2)
         label = rf"$\it{{{species}}}$: $R^2$ = {fit.rvalue ** 2:.3f}, {format_pvalue(fit.pvalue)}"
-        ax.text(0.03, y_text, label, transform=ax.transAxes, va="bottom", ha="left", fontsize=7, color=COLOR_MAP[species])
+        ax.text(0.03, y_text, label, transform=ax.transAxes, va="bottom", ha="left", fontsize="small", color=COLOR_MAP[species])
 
     ax.set_xlabel(IBD_LABEL)
     ax.set_ylabel(y_col)

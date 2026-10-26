@@ -13,7 +13,7 @@ anc = pd.read_csv(f"{REPO}/ancestry_estimates/whole_data_new/admixture/finches.9
 anc["ind"] = pd.read_csv(f"{REPO}/ancestry_estimates/whole_data_new/admixture/finches.fam", header=None, sep="\\s+")[1]
 birds["anc_con"] = birds["ind"].map(anc.set_index("ind")[1])
 
-plt.figure(figsize=(6.4, 4.8))
+plt.figure(figsize=(7.04, 5.28))
 sns.scatterplot(x="anc_con", y="fraction_snps_ibd", hue="Species", palette=COLOR_MAP, data=birds, s=50, alpha=0.7)
 plt.xlabel("Conirostris Ancestry Proportion")
 plt.ylabel(IBD_LABEL)

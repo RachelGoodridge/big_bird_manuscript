@@ -28,8 +28,8 @@ pivot["max_kin"] = pivot[descendants_list].max(axis=1)
 pivot = pivot.sort_values(by="max_line")
 pivot["year1"] = pivot["year1"].astype(int)
 
-# kinship cutoffs between degrees of relatedness (high kinship → low kinship order)
-cutoffs = degree_cutoffs(coef, range(1, 7))
+# kinship cutoffs between degrees of relatedness (high kinship → low kinship order; 5th degree and beyond are shown together)
+cutoffs = degree_cutoffs(coef, range(1, 5))
 
 
 ############################
@@ -46,7 +46,7 @@ for ax, spp in zip(axes, FOCAL_SPECIES):
     ax.set_xlabel(None)
     ax.set_ylabel("Kinship coefficient to closest relative")
     ax.set_title(spp, fontstyle="italic")
-    style_legend(ax, title=None, loc="upper right")
+    style_legend(ax, title=None, loc="upper left")
     ax.grid(axis="y")
     ax.set_xticks(np.arange(1975, 2025, 5))
     ax.set_ylim(-0.002, 0.25)
@@ -65,7 +65,7 @@ midpoints = [(boundaries[i] + boundaries[i + 1]) / 2 for i in range(len(boundari
 ax2 = axes[1].twinx()
 ax2.set_ylim(y_min, y_max)
 ax2.set_yticks(midpoints)
-ax2.set_yticklabels(["1st", "2nd", "3rd", "4th", "5th", "6th", "7th+"])
+ax2.set_yticklabels(["1st", "2nd", "3rd", "4th", "5th+"])
 ax2.tick_params(axis="y", length=0)
 ax2.grid(False)
 

@@ -17,14 +17,12 @@ python scripts/supp_ideogram.py
 python scripts/supp_frac_founder_genome.py
 python scripts/supp_kinship_top_scandens.py
 python scripts/supp_ibd_length_over_time.py
-python scripts/supp_drought_ibd.py
+python scripts/supp_drought_boxplots.py
 python scripts/supp_drought_ibd_bins.py
-python scripts/supp_drought_beak_size.py
 python scripts/supp_drought_locus_ibd.py
 python scripts/supp_allometry.py
 python scripts/supp_allometry_ground.py
-python scripts/supp_control_carrier_freq.py  # needs tune_trim_ibis/05_control_birds.sh
-python scripts/supp_control_mean_ibd.py
+python scripts/supp_controls.py  # needs tune_trim_ibis/05_control_birds.sh
 python scripts/supp_ibd_window_freqs.py
 python scripts/supp_beak_traits_over_time.py
 

@@ -42,7 +42,7 @@ ROW_GAP      = 0.1   # vertical gap between rows, in TRACK_HEIGHT units
 ROW_PITCH    = TRACK_HEIGHT + ROW_GAP
 TRACK_ROWS   = [("fortis", year_choice2), ("fortis", year_choice), ("scandens", year_choice2), ("scandens", year_choice)]
 n_rows = len(TRACK_ROWS)
-FS_LABEL = 13
+FS_LABEL = 15
 
 fig, ax = plt.subplots(figsize=(30, 4))
 cmap = plt.get_cmap("Reds")
@@ -83,9 +83,8 @@ for species, rows in species_row_indices.items():
 ax.set_xlim(0, total_genome_mb)
 ax.set_ylim(0, (n_rows - 1) * ROW_PITCH + TRACK_HEIGHT)
 
-# individual labels through chromosome "19"; the tail of tiny micro-chromosomes
-# (21, 22, ..., 28, LGE22) is too narrow for separate labels, so it collapses
-# into one combined tick, mirroring the grouped-tail style of the reference Manhattan plot
+# individual labels initially; the tail of small chromosomes is too narrow for separate labels,
+# so they are combined into one tick, mirroring the grouped-tail style of the reference Manhattan plot
 split_idx = [chr_dict[c] for c in chroms_ordered].index("21")
 individual_chroms = chroms_ordered[:split_idx]
 combined_chroms   = chroms_ordered[split_idx:]
@@ -98,7 +97,7 @@ x_tick_positions.append((combined_x0 + combined_x1) / 2)
 x_tick_labels.append("21-28, LGE22")
 ax.set_xticks(x_tick_positions)
 ax.set_xticklabels(x_tick_labels, fontsize=FS_LABEL)
-ax.set_xlabel("Chromosome", fontsize=14, labelpad=8)
+ax.set_xlabel("Chromosome", fontsize=19, labelpad=8)
 
 # unlabeled minor ticks: one centered in each inter-chromosome gap, plus one at
 # the very start and one at the very end of the whole genome

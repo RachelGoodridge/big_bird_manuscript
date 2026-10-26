@@ -8,6 +8,11 @@ MASTER_DB = "/local/storage/all_birds_highcov_lowcov/Finch_Database_V2.csv"
 BIG_BIRDS = "/local/storage/BigBirds/BigBirds.csv"
 VCF_SAMPLES = "/local/storage/all_birds_highcov_lowcov/samples.txt"
 
+# birds whose database species is wrong: bird -> corrected species
+SPECIES_CORRECTIONS = {
+    "01Dap21269": "magnirostris",  # recorded as fortis, but magnirostris ancestry and beak size
+}
+
 # the founder of the Big Bird lineage
 FOUNDER = "04Dap5110"
 DESCENDANT_LINEAGES = ["A line", "B line", "Big Birds"]
@@ -21,7 +26,8 @@ COLOR_MAP = {"fortis": "#1C86EE", "scandens": "#43CD80", "fuliginosa": "#C6E2FF"
              "magnirostris": "#EEB422", "conirostris": "#8B4513", "B line": "#FFAEB9", "unknown": "#808080", "Big Birds": "#800080"}
 PLOT_THEME = {"font.family": "DejaVu Sans", "axes.facecolor": "white", "axes.edgecolor": "#DCDCDC", "axes.linewidth": 1.2, "axes.grid": True,
               "grid.color": "#EAEAEA", "grid.linestyle": "-", "grid.linewidth": 0.5, "xtick.color": "black", "ytick.color": "black", "xtick.major.size": 0,
-              "ytick.major.size": 0}
+              "ytick.major.size": 0, "font.size": 14, "axes.labelsize": 15, "axes.titlesize": 15, "xtick.labelsize": 12, "ytick.labelsize": 12,
+              "legend.fontsize": 12, "legend.title_fontsize": 12}
 
 
 def set_plot_theme():
@@ -50,6 +56,9 @@ def load_master(island="Daphne"):
     master["lineage"] = master["lineage"].fillna(master["Species"])
     master = master.drop(columns=["Species"]).rename(columns={"lineage": "Species"})
     master["Generation"] = master["meaningful.unique"].map(bbs_lines["Generation"])
+
+    # correct species labels that are contradicted by ancestry and morphology
+    master["Species"] = master["meaningful.unique"].map(SPECIES_CORRECTIONS).fillna(master["Species"])
     return master
 
 

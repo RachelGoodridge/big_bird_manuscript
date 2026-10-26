@@ -29,7 +29,7 @@ def window_lines(freq, cols, **kwargs):
 
 
 # every window (gray), windows in the beak loci (colors), and the mean across all windows (black)
-fig, axes = plt.subplots(1, 2, figsize=(10.5, 4.8), sharey=True)
+fig, axes = plt.subplots(1, 2, figsize=(12, 4.8), sharey=True)
 for ax, spp in zip(axes, FOCAL_SPECIES):
     freq = freqs[spp]
     ax.add_collection(window_lines(freq, freq.columns[~freq.columns.isin(locus_windows)], color="lightgray", linewidth=0.5, alpha=0.25, zorder=1))
@@ -40,7 +40,7 @@ for ax, spp in zip(axes, FOCAL_SPECIES):
     ax.set_title(spp, fontstyle="italic")
     ax.set_xlabel(None)
     ax.set_xticks(np.arange(1990, 2025, 5))
-    ax.set_xlim(1990, 2024)
+    ax.set_xlim(1988, 2024)
     ax.set_ylim(0, max(f.to_numpy().max() for f in freqs.values()) * 1.02)
     sns.despine(top=True, right=True, ax=ax)
 

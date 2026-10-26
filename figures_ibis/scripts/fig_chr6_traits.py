@@ -162,13 +162,13 @@ def annotate_panel(ax, beta, p_reg, p_mwu, y_max, y_range):
     y_top = y_max + y_range * 0.05
 
     ax.plot([0, 0, 1, 1], [y_top, y_top + h, y_top + h, y_top], lw=1.2, color="black", clip_on=False)
-    ax.text(0.5, y_top + h + pad, stars, ha="center", va="bottom", fontsize=14)
+    ax.text(0.5, y_top + h + pad, stars, ha="center", va="bottom", fontsize=18)
     ax.set_ylim(top=y_top + h + pad + y_range * 0.08)
 
     # regression stats (continuous chr_IBD, GRM-LMM) placed below the panel - this is a
     # separate calculation from the boxed/binned Mann-Whitney comparison shown above
     p_reg_str = f"p = {p_reg:.3f}" if p_reg > 0.001 else "p < 0.001"
-    ax.text(0.5, -0.14, f"GRM-LMM: β = {beta:.3f}, {p_reg_str}", transform=ax.transAxes, ha="center", va="top", fontsize=9, color="#333333")
+    ax.text(0.5, -0.14, f"GRM-LMM: β = {beta:.3f}, {p_reg_str}", transform=ax.transAxes, ha="center", va="top", fontsize="small", color="#333333")
 
 fig, axes = plt.subplots(2, 2, figsize=(10.6, 11))
 for ax, trait in zip(axes.flat, trait_list):
@@ -177,9 +177,8 @@ for ax, trait in zip(axes.flat, trait_list):
         ax.collections[-1].set_zorder(3)
 
     ax.set_xlabel(None)
-    ax.tick_params(axis="x", labelsize=12)
-    ax.set_ylabel(trait, fontsize=12)
-    ax.set_title(f"IBD on chr. {chrom_name} in " + r"$\it{" + spp + "}$", fontsize=12)
+    ax.set_ylabel(trait)
+    ax.set_title(f"IBD on chr. {chrom_name} in " + r"$\it{" + spp + "}$")
 
     y_max = master2_box[trait].max()
     y_range = master2_box[trait].max() - master2_box[trait].min()
