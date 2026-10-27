@@ -4,7 +4,11 @@ ancestry_estimates/training_new/plink/finches.*
 ancestry_estimates/whole_data_new/admixture/finches.*
 ancestry_estimates/whole_data_new/plink/finches.*
 ancestry_estimates/whole_data_old/finches.*
+epistasis/scripts/__pycache__/
 figures_ibis/scripts/__pycache__/
+locus_genotyping/data/autosomes_Daphne_cluster1_multivariate_PCsp_lmm4.bin.pos.genos
+locus_genotyping/scripts/__pycache__/
+locus_genotyping/work/
 tune_trim_ibis/dataset/downsampled_snps.*
 tune_trim_ibis/output/
 tune_trim_ibis/plink/

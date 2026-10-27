@@ -5,8 +5,7 @@ import seaborn as sns
 from scipy import linalg
 from scipy.optimize import minimize_scalar
 from scipy.stats import mannwhitneyu, chi2
-from sklearn.preprocessing import StandardScaler
-from common import COLOR_MAP, add_bill_pcs, add_body_pc, load_bim, load_chromosomes, load_founder_coef, load_master, load_trimmed_segments, save_figure, set_plot_theme
+from common import COLOR_MAP, add_beak_body_ratio, add_bill_pcs, add_body_pc, load_bim, load_chromosomes, load_founder_coef, load_master, load_trimmed_segments, save_figure, set_plot_theme
 
 set_plot_theme()
 spp = "scandens"
@@ -43,10 +42,8 @@ master2 = master2.dropna(subset=["weight", "wing", "tarsus", "bill.length", "bil
 # PCA on body size (signed so larger values mean heavier birds) and on bill dimensions
 master2 = add_bill_pcs(add_body_pc(master2))
 
-# beak volume proxy : body mass, log transform to create normal distribution, and then standardize to remove the unit problem
-beak_volume = master2["bill.length"] * master2["bill.depth"] * master2["bill.width"]
-master2["Beak:Body Ratio"] = np.log(beak_volume / master2["weight"])
-master2["Beak:Body Ratio"] = StandardScaler().fit_transform(master2[["Beak:Body Ratio"]]).ravel()
+# beak volume relative to body mass, standardized within these scandens
+master2 = add_beak_body_ratio(master2)
 
 # create IBD categories for boxplot
 thresh = 0.5
@@ -67,7 +64,7 @@ EXTRA_COVARS = {
     "PC(Beak Pointedness)": ["PC(Body Size)"],
 }
 
-grm_dir = f"/SSD/reg259/IBIS/allele_freqs/QTL_GWAS/GRM/{spp}"
+grm_dir = f"/SSD/reg259/IBIS/QTL_GWAS/GRM/{spp}"
 grm_fam = pd.read_csv(f"{grm_dir}/plink.fam", header=None, sep=r"\s+", names=["FID", "IID", "PAT", "MAT", "SEX", "PHENO"], dtype=str)
 grm_index = {iid: i for i, iid in enumerate(grm_fam["IID"].tolist())}
 grm_matrix = np.loadtxt(f"{grm_dir}/gemma_grm_excl_chr{chrom_code}.cXX.txt")

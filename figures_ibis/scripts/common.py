@@ -18,6 +18,7 @@ FIGURES = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REPO = os.path.dirname(FIGURES)
 IBIS = f"{REPO}/tune_trim_ibis"
 DATA = f"{FIGURES}/data"
+GENOTYPING = f"{REPO}/locus_genotyping"  # large-effect beak loci positions and genotype calls
 
 # reuse the bird metadata and plot theme from the IBIS pipeline (loaded by path since both files are named common.py)
 _spec = importlib.util.spec_from_file_location("ibis_common", f"{IBIS}/scripts/common.py")
@@ -116,6 +117,13 @@ def add_body_pc(df):
     """First PC of standardized weight, wing, and tarsus, signed so larger values mean heavier birds."""
     pc = PCA(n_components=1).fit_transform(StandardScaler().fit_transform(df[["weight", "wing", "tarsus"]]))[:, 0]
     df["PC(Body Size)"] = pc * np.sign(np.corrcoef(pc, df["weight"])[0, 1])
+    return df
+
+
+def add_beak_body_ratio(df):
+    """Beak volume (length x depth x width) relative to body mass, log transformed (closer to normal) and standardized across df (unitless)."""
+    beak_volume = df["bill.length"] * df["bill.depth"] * df["bill.width"]
+    df["Beak:Body Ratio"] = StandardScaler().fit_transform(np.log(beak_volume / df["weight"]).to_frame()).ravel()
     return df
 
 

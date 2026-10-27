@@ -1,13 +1,13 @@
 import pandas as pd
-from common import DATA, load_drought_fortis, load_master
+from common import GENOTYPING, load_drought_fortis, load_master
 
 birds = load_drought_fortis(load_master())
-loci = sorted(pd.read_csv(f"{DATA}/QTLs/loci_positions.csv")["locus"].str.split("_").str[-1])
+loci = sorted(pd.read_csv(f"{GENOTYPING}/data/loci_positions.csv")["locus"].str.split("_").str[-1])
 
 # number of large (L) alleles each bird carries at each locus, dropping predicted genotypes with < 0.99 confidence
 for locus in loci:
-    pred_genos = pd.read_csv(f"{DATA}/QTLs/eigenvec_df_{locus}.csv")
-    pred_genos = pred_genos[pred_genos["#IID"].isin(birds["meaningful.unique"]) & (pred_genos["confidence"] >= 0.99)].set_index("#IID")
+    pred_genos = pd.read_csv(f"{GENOTYPING}/output/genotypes_{locus}.csv")
+    pred_genos = pred_genos[pred_genos["IID"].isin(birds["meaningful.unique"]) & (pred_genos["confidence"] >= 0.99)].set_index("IID")
     birds[f"allele_count_{locus}"] = birds["meaningful.unique"].map(pred_genos["predicted_genotype"].str.count("L"))
 
 # proportion of L alleles (among birds with a confident genotype) in fortis without IBD (general population) and in fortis with IBD that died

@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from matplotlib.lines import Line2D
 import seaborn as sns
-from common import DATA, FOCAL_SPECIES, ibd_window_frequencies, load_chromosomes, load_master, save_figure, set_plot_theme, style_legend
+from common import DATA, FOCAL_SPECIES, GENOTYPING, ibd_window_frequencies, load_chromosomes, load_master, save_figure, set_plot_theme, style_legend
 
 set_plot_theme()
 
@@ -12,7 +12,7 @@ set_plot_theme()
 freqs, windows = ibd_window_frequencies(load_master())
 
 # windows within each of the 6 large-effect beak loci
-loci_pos = pd.read_csv(f"{DATA}/QTLs/loci_positions.csv")
+loci_pos = pd.read_csv(f"{GENOTYPING}/data/loci_positions.csv")
 chrom_code = {f"chr{name}": code for code, name in load_chromosomes().items()}
 loci_wins = {}
 for _, locus in loci_pos.iterrows():

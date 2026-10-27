@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy import stats
-from common import DATA, load_chromosomes, load_drought_fortis, load_master, load_trimmed_segments, save_figure, set_plot_theme, style_legend
+from common import GENOTYPING, load_chromosomes, load_drought_fortis, load_master, load_trimmed_segments, save_figure, set_plot_theme, style_legend
 
 set_plot_theme()
 birds = load_drought_fortis(load_master())
@@ -15,7 +15,7 @@ seg["phys_start_pos"] *= 1e6
 seg["phys_end_pos"] *= 1e6
 
 # the 6 large-effect beak loci
-loci_pos = pd.read_csv(f"{DATA}/QTLs/loci_positions.csv")
+loci_pos = pd.read_csv(f"{GENOTYPING}/data/loci_positions.csv")
 loci_pos["name"] = loci_pos["locus"].str.split("_").str[-1]
 loci_pos = loci_pos.sort_values("name")
 
