@@ -12,7 +12,7 @@ descendants_list = ["A line", "B line", "Big Birds"]
 master = load_master().set_index("meaningful.unique")
 coef = load_all_coef()
 for i in [1, 2]:
-    coef[f"year{i}"] = coef[f"Individual{i}"].map(master["First.year"])
+    coef[f"year{i}"] = coef[f"Individual{i}"].map(master["year"])
     coef[f"spp{i}"] = coef[f"Individual{i}"].map(master["Species"])
 
 # include both orientations of each pair, then keep fortis/scandens paired with older descendants of the founder

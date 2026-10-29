@@ -31,12 +31,13 @@ for ax, y_col, y_label, y_lim in [(ax_b, "fraction_snps_ibd_mean", MEAN_IBD_LABE
 
 for ax in [ax_a, ax_b, ax_c]:
     format_year_axis(ax)
+    ax.tick_params(axis="x", rotation=30)
     ax.get_legend().remove()
     sns.despine(top=True, right=True, left=False, bottom=False, ax=ax)
 
 # one legend for all three panels in a row above them, so it covers no data (panel a has every group)
 handles, labels = ax_a.get_legend_handles_labels()
-leg = fig.legend(handles, labels, loc="upper center", ncol=len(labels), bbox_to_anchor=(0.5, 0.95), frameon=False)
+leg = fig.legend(handles, labels, loc="upper center", ncol=len(labels), bbox_to_anchor=(0.5, 0.95), frameon=False, fontsize=13)
 italicize_species_legend(leg)
 
 plt.tight_layout(rect=(0, 0, 1, 0.92))

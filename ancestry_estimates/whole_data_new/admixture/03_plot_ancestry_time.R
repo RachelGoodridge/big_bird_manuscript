@@ -2,9 +2,14 @@
 library(tidyverse)
 library(patchwork)
 
+# move to the directory of this script
+args <- commandArgs(trailingOnly = FALSE)
+script_path <- gsub("--file=", "", args[grep("--file=", args)])
+if (length(script_path) > 0) setwd(dirname(script_path))
+
 # same as whole_data_old/ancestry_time.R, but for the new K=9 projection and only fortis + scandens ancestry
-project_dir <- "/SSD/reg259/big_bird_admixture/whole_data_new/admixture"
 k <- 9
+print(paste("plotting K =", k))
 
 # get all the Daphne fortis/scandens records from the master spreadsheet
 species_order <- c("fortis", "scandens")
@@ -15,15 +20,18 @@ records <- records[!duplicated(records$meaningful.unique), ]  # remove duplicate
 bbs_lines <- read.csv("/local/storage/BigBirds/BigBirds.csv")
 bbs_lines <- bbs_lines[!duplicated(bbs_lines$meaningful.unique),]
 records$Species <- coalesce(bbs_lines$lineage[match(records$meaningful.unique, bbs_lines$meaningful.unique)], records$Species)
+
+# correct the species for an individual (before keeping only fortis / scandens)
+records <- records |> mutate(Species = if_else(meaningful.unique == "01Dap21269", "magnirostris", Species))
 records <- records %>% filter(Island == "Daphne", Species %in% species_order)
 
-# fill in missing years with the minimum year, year born, or last year, in that order of preference (as in 02_plot_admixture.R)
-records <- records %>% mutate(start = coalesce(First.year, First.year.min, Year.born, Last.year), end = coalesce(Last.year, start)) %>%
+# first year alive: the earliest of year born, first year seen, and earliest year recorded (last year seen if none are known), as in 02_plot_admixture.R
+records <- records %>% mutate(start = coalesce(pmin(Year.born, First.year, First.year.min, na.rm = TRUE), Last.year), end = coalesce(Last.year, start)) %>%
   select(ind = meaningful.unique, Species, start, end)
 
 # read the admixture data and add the species + years
-data <- read.table(file.path(project_dir, paste0("finches.", k, ".Q")))
-data$ind <- read.table(file.path(project_dir, "finches.fam"))$V2
+data <- read.table(paste0("finches.", k, ".Q"))
+data$ind <- read.table("finches.fam")$V2
 data <- inner_join(data, records, by = "ind") %>% filter(!is.na(start))
 
 # rename the columns based on ancestry (see species_ancestry in 02_plot_admixture.R)

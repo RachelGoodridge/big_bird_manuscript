@@ -7,8 +7,8 @@ PLINK2=/programs/plink2_linux_20230721/plink2
 IBIS=/SSD/reg259/IBIS/ibis/ibis  # v1.20.9 (commit 435a4fb)
 
 # extract just the inds for tuning
-mkdir tuning tuning_plots
-$PLINK2 --bfile plink/dataset --keep dataset/birds_for_tuning.txt --autosome-num 95 --make-bed --out tuning/dataset
+TUNING_INDS=dataset/birds_for_tuning.txt
+$PLINK2 --bfile plink/dataset --keep $TUNING_INDS --autosome-num 95 --make-bed --out tuning/dataset
 
 # create a file to store the results
 echo "LENGTH,MARKERS,ERROR,POS_MEAN_ERR,NEG_MEAN_ERR,NEG_MAX_ERR" > results.csv

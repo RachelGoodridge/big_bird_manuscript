@@ -23,7 +23,7 @@ master["fraction_snps_ibd"] = master["meaningful.unique"].map(fraction_snps_ibd)
 neg_max_error = negative_controls(master)["fraction_snps_ibd"].max()
 
 # plot generation vs. fraction of SNPs in IBD
-plt.figure(figsize=(6.4, 4.8))
+plt.figure(figsize=(6.6, 5))
 sns.scatterplot(x="Generation", y="fraction_snps_ibd", hue="Species", palette=COLOR_MAP, data=master[~master["Generation"].isna()], s=50, alpha=0.7)
 plt.xlabel("Generations from the Founder")
 plt.ylabel("Fraction of all SNPs in IBD")
@@ -35,7 +35,7 @@ plt.savefig("tuning_plots/gen_vs_frac_ibd.png", dpi=450, bbox_inches="tight", pa
 plt.close()
 
 # plot generation vs. distribution of segment lengths
-plt.figure(figsize=(6.4, 4.8))
+plt.figure(figsize=(6.6, 5))
 seg["Generation"] = seg["ind"].map(master.set_index("meaningful.unique")["Generation"])
 seg["Species"] = seg["ind"].map(master.set_index("meaningful.unique")["Species"])
 sns.boxplot(x="Generation", y="genetic_seg_length", hue="Species", palette=COLOR_MAP, data=seg[~seg["Generation"].isna()])
@@ -49,7 +49,7 @@ plt.savefig("tuning_plots/gen_vs_seg_len_dist.png", dpi=450, bbox_inches="tight"
 plt.close()
 
 # plot generation vs. kinship coefficient
-plt.figure(figsize=(6.4, 4.8))
+plt.figure(figsize=(6.6, 5))
 coef["Generation"] = coef["ind"].map(master.set_index("meaningful.unique")["Generation"])
 sns.scatterplot(x="Generation", y="Kinship_Coefficient", hue="Degree", data=coef[~coef["Generation"].isna()], s=50, alpha=0.7)
 plt.xlabel("Generations from the Founder (Actual)")

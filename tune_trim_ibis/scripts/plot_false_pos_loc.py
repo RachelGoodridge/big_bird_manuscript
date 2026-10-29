@@ -18,7 +18,7 @@ neg_seg["length_Mb"] = neg_seg["phys_end_pos"] - neg_seg["phys_start_pos"]
 
 # setup the plot with one panel per chromosome that has false positive segments
 chroms = [c for c in chr_dict if c in neg_seg["chrom"].unique()]
-fig, axes = plt.subplots(math.ceil(len(chroms) / 6), 6, figsize=(22, 9), sharex=False, sharey=False)
+fig, axes = plt.subplots(math.ceil(len(chroms) / 6), 6, figsize=(25.5, 10), sharex=False, sharey=False)
 axes = axes.flatten()
 
 for ax, chrom in zip(axes, chroms):
@@ -31,7 +31,7 @@ for ax, chrom in zip(axes, chroms):
     for _, row in exclude[exclude["chrom"] == chrom].iterrows():
         ax.axvspan(row["phys_start_pos"], row["phys_end_pos"], color="red", alpha=0.25, lw=0)
 
-    ax.set_xlabel(f"Physical Position (Mb) on Chromosome {chr_dict[chrom]}")
+    ax.set_xlabel(f"Position (Mb) on Chromosome {chr_dict[chrom]}")
     ax.set_ylabel("IBD Segment Count")
     sns.despine(top=True, right=True, left=True, bottom=True, ax=ax)
 

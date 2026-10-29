@@ -16,7 +16,7 @@ num_ind = seg_untrim.ind.nunique()
 trim_seg = pd.read_pickle("output/trim_seg_founder_neg_max_error.pkl")
 
 # setup the plot
-fig, axes = plt.subplots(6, 5, figsize=(20, 12), sharex=False, sharey=True)
+fig, axes = plt.subplots(6, 5, figsize=(30, 18), sharex=False, sharey=True)
 axes = axes.flatten()
 
 for ax, chrom in zip(axes, chr_dict):

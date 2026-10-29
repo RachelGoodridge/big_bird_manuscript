@@ -1,6 +1,11 @@
 # switch to working in R and define inputs
 library(tidyverse)
 
+# move to the directory of this script
+args <- commandArgs(trailingOnly = FALSE)
+script_path <- gsub("--file=", "", args[grep("--file=", args)])
+if (length(script_path) > 0) setwd(dirname(script_path))
+
 # get species + island for every training individual from the master spreadsheet
 master <- read.csv("/local/storage/all_birds_highcov_lowcov/Finch_Database_V2.csv", header = TRUE, fill = TRUE, na.strings = c("", "NA", "XX"), stringsAsFactors = FALSE)
 master <- master[!duplicated(master$meaningful.unique),]

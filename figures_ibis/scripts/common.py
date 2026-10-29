@@ -65,11 +65,11 @@ def load_all_coef():
 
 
 def add_bird_info(df, master, col="ind"):
-    """Add species and first/last year from the master database, dropping birds without years."""
+    """Add species and the first/last year alive from the master database, dropping birds without years."""
     info = master.set_index("meaningful.unique")
     df["Species"] = df[col].map(info["Species"])
-    df["Year"] = df[col].map(info["First.year"])
-    df["Last_Year"] = df[col].map(info["Last.year"])
+    df["Year"] = df[col].map(info["year"])
+    df["Last_Year"] = df[col].map(info["last.year"])
     return df.dropna(subset=["Year", "Last_Year"])
 
 
@@ -258,7 +258,7 @@ def ibd_frequency_profiles(master, year, chrom_lengths, bin_size=0.1):
             for species in FOCAL_SPECIES for chrom in chrom_lengths.index}
 
 
-# genomic windows for IBD frequencies: non-overlapping, and a segment covers a window if it overlaps at least 80% of it
+# genomic windows for IBD frequencies: non-overlapping, and a bird is in IBD in a window if its segments together cover at least 80% of it
 WINDOW_SIZE = 100_000
 WINDOW_COVERAGE = 0.8
 
@@ -275,8 +275,9 @@ def make_windows(bim):
 
 
 def ibd_window_frequencies(master):
-    """Proportion of fortis / scandens alive each year with a trimmed IBD segment covering each window (year x window table per species)."""
+    """Proportion of fortis / scandens alive each year in IBD with the founder in each window (year x window table per species)."""
     windows = make_windows(load_bim())
+    win_starts, win_ends = windows["start"].to_numpy(), windows["end"].to_numpy()
 
     # trimmed segments of fortis and scandens (positions in bp), and the birds of each species alive each year
     seg = add_bird_info(load_trimmed_segments(), master)
@@ -285,29 +286,29 @@ def ibd_window_frequencies(master):
     alive = expand_years_alive(founder_ibd_per_bird(master))
     n_alive = alive[alive["Species"].isin(FOCAL_SPECIES)].groupby(["Species", "Year_alive"]).size()
 
-    # the (contiguous) range of windows each segment covers
-    seg["first"], seg["last"] = 0, -1
+    # length of each segment's overlap with every window it touches
+    pieces = []
     for chrom, win in windows.groupby("chrom"):
-        win_starts, win_ends, offset = win["start"].to_numpy(), win["end"].to_numpy(), win.index[0]
+        chrom_starts, chrom_ends, offset = win["start"].to_numpy(), win["end"].to_numpy(), win.index[0]
         for k in np.flatnonzero(seg["chrom"] == chrom):
-            lo, hi = np.searchsorted(win_ends, starts_bp[k], side="right"), np.searchsorted(win_starts, ends_bp[k], side="left")
-            overlap = np.minimum(ends_bp[k], win_ends[lo:hi]) - np.maximum(starts_bp[k], win_starts[lo:hi])
-            covered = np.flatnonzero(overlap >= WINDOW_COVERAGE * (win_ends[lo:hi] - win_starts[lo:hi]))
-            if len(covered):
-                seg.loc[k, ["first", "last"]] = offset + lo + covered[0], offset + lo + covered[-1]
+            lo, hi = np.searchsorted(chrom_ends, starts_bp[k], side="right"), np.searchsorted(chrom_starts, ends_bp[k], side="left")
+            overlap = np.minimum(ends_bp[k], chrom_ends[lo:hi]) - np.maximum(starts_bp[k], chrom_starts[lo:hi])
+            pieces.append(pd.DataFrame({"ind": seg.at[k, "ind"], "window": offset + np.arange(lo, hi), "overlap": overlap}))
 
-    # count covering segments per window for every year each bird was alive (difference array over windows)
-    seg_years = expand_years_alive(seg[seg["last"] >= 0])
-    years = sorted(seg_years["Year_alive"].unique())
+    # a bird is in IBD in a window if its segments (which never overlap each other) together cover at least 80% of the window
+    covered = pd.concat(pieces).groupby(["ind", "window"], as_index=False)["overlap"].sum()
+    covered = covered[covered["overlap"] >= WINDOW_COVERAGE * (win_ends - win_starts)[covered["window"]]]
+
+    # count the birds in IBD in each window for every year they were alive
+    birds = seg.drop_duplicates("ind").set_index("ind")[["Species", "Year", "Last_Year"]]
+    covered_years = expand_years_alive(covered.join(birds, on="ind"))
+    years = sorted(covered_years["Year_alive"].unique())
     freqs = {}
     for spp in FOCAL_SPECIES:
-        sub = seg_years[seg_years["Species"] == spp]
-        year_idx = np.searchsorted(years, sub["Year_alive"].astype(int))
-        counts = np.zeros((len(years), len(windows) + 1))
-        np.add.at(counts, (year_idx, sub["first"].to_numpy(dtype=int)), 1)
-        np.add.at(counts, (year_idx, sub["last"].to_numpy(dtype=int) + 1), -1)
-        counts = np.cumsum(counts, axis=1)[:, :-1] / n_alive[spp].reindex(years).to_numpy()[:, None]
-        freqs[spp] = pd.DataFrame(counts, index=years, columns=windows["name"])
+        sub = covered_years[covered_years["Species"] == spp]
+        counts = np.zeros((len(years), len(windows)))
+        np.add.at(counts, (np.searchsorted(years, sub["Year_alive"].astype(int)), sub["window"].to_numpy(dtype=int)), 1)
+        freqs[spp] = pd.DataFrame(counts / n_alive[spp].reindex(years).to_numpy()[:, None], index=years, columns=windows["name"])
     return freqs, windows
 
 

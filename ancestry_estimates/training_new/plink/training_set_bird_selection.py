@@ -1,5 +1,10 @@
+import os
+import sys
 import pandas as pd
 import shutil
+
+# move to the directory of this script
+os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
 
 # get a list of the reference panel
 panel="/local/storage/unphased_reference_panel/finches_sentieon_concat_SNPs_fil_setGT_PASS_BIALLELIC_ACf.csv"
@@ -10,7 +15,7 @@ spp_island = {"difficilis":["Fernandina","Santiago","Pinta"], "septentrionalis":
               "acutirostris":["Genovesa"], "fortis":["Daphne","Santa_Cruz"], "fuliginosa":["Santiago","Santa_Cruz"], "magnirostris":["Genovesa", "Daphne"], "scandens":["Daphne"]}
 
 # write selected birds to a file
-file_path="/SSD/reg259/big_bird_admixture/training_subset/bird_selection.txt"
+file_path="keep_list.txt"
 for key, value in spp_island.items():
     mask = (data["Species_inferred"]==key) & (data["Island_inferred"].isin(value))
     with open(file_path, "a") as file:
@@ -18,7 +23,7 @@ for key, value in spp_island.items():
             file.write(bird + "\n")
 
 # get a list of the older Daphne birds
-old="/local/storage/Daphne_pruned/Daphne_neutral_aims_pruned_Daphne_AIMs_not2022.csv"
+old="/local/storage/Daphne_pruned/Daphne_neutral_aims_pruned_not2022.csv"
 data = pd.read_csv(old)
 
 # select the 10 of each species with highest self-ancestry

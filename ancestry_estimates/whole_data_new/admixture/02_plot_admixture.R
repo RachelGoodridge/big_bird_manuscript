@@ -5,9 +5,14 @@ library(patchwork)
 library(grid)
 library(ggnewscale)
 
+# move to the directory of this script
+args <- commandArgs(trailingOnly = FALSE)
+script_path <- gsub("--file=", "", args[grep("--file=", args)])
+if (length(script_path) > 0) setwd(dirname(script_path))
+
 # ── set these once you've picked K and run 01_run_projection.sh <K> ─────────
-project_dir <- "/SSD/reg259/big_bird_admixture/whole_data_new/admixture"
 k <- 9
+print(paste("plotting K =", k))
 
 # the ancestry cluster each named population is dominated by, for this K.
 species_ancestry <- c(fortis = "V1", scandens = "V6", conirostris = "V2")
@@ -18,9 +23,9 @@ all_records <- read.csv("/local/storage/all_birds_highcov_lowcov/Finch_Database_
 all_records <- all_records[!duplicated(all_records$meaningful.unique),]  # remove duplicates (probably they are all re-captures)
 all_records <- all_records[, c("meaningful.unique", "Species", "Island", "First.year", "First.year.min", "Year.born", "Last.year")]
 
-# fill in missing years with the minimum year, year born, or last year, in that order of preference
-all_records <- all_records %>% mutate(First.year = coalesce(First.year, First.year.min, Year.born, Last.year),
-                                       Last.year = coalesce(Last.year, First.year))
+# first year alive: the earliest of year born and first year recorded (last year seen if none are known)
+all_records <- all_records %>% mutate(year = coalesce(pmin(Year.born, First.year, First.year.min, na.rm = TRUE), Last.year),
+                                       last.year = coalesce(Last.year, year))
 
 # update the newest lineage classifications
 bbs_lines <- read.csv("/local/storage/BigBirds/BigBirds.csv")
@@ -28,6 +33,9 @@ bbs_lines <- bbs_lines[!duplicated(bbs_lines$meaningful.unique),]
 all_records$lineage <- bbs_lines$lineage[match(all_records$meaningful.unique, bbs_lines$meaningful.unique)]
 all_records <- all_records %>% mutate(lineage = coalesce(lineage, Species))
 all_records <- all_records %>% select(-Species) %>% rename(Species = lineage)
+
+# correct the species for an individual
+all_records <- all_records |> mutate(Species = if_else(meaningful.unique == "01Dap21269", "magnirostris", Species))
 
 # 01_whole_data_bed.sh now projects every sample in the raw VCF
 # Restrict this plot to exactly the populations of interest.
@@ -50,8 +58,8 @@ italic_size_factor <- 0.9
 # function to create each admixture subplot
 make_admixture_plot <- function(k, show_x = FALSE, spacing = 2, year_cutoff = 1987, label_size = 20) {
   # read the whole-data individuals and add species + first-year information
-  data <- read.table(file.path(project_dir, paste0("finches.", k, ".Q")))
-  fam <- read.table(file.path(project_dir, "finches.fam"))
+  data <- read.table(paste0("finches.", k, ".Q"))
+  fam <- read.table("finches.fam")
   data$ind <- fam$V2
   data <- left_join(data, all_records, by = c("ind" = "meaningful.unique"))
 
@@ -60,8 +68,8 @@ make_admixture_plot <- function(k, show_x = FALSE, spacing = 2, year_cutoff = 19
   data <- data %>% filter(Species %in% populations)
   data <- data %>% mutate(Species = factor(Species, levels = populations))
 
-  # restrict fortis and scandens to birds first seen before year_cutoff
-  data <- data %>% filter(!(Species %in% c("fortis", "scandens")) | First.year < year_cutoff)
+  # restrict fortis and scandens to birds alive before year_cutoff
+  data <- data %>% filter(!(Species %in% c("fortis", "scandens")) | year < year_cutoff)
 
   # the gap after each population's panel; conirostris sits almost flush against founder
   # since founder is itself a conirostris hybrid, everything else uses the standard spacing

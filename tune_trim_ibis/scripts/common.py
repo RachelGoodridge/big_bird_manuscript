@@ -42,11 +42,10 @@ def load_master(island="Daphne"):
     if island is not None:
         master = master[master["Island"] == island].copy()
 
-    # fill in missing years with the minimum year, year born, or last year
-    master["First.year"] = master["First.year"].fillna(master["First.year.min"])
-    master["First.year"] = master["First.year"].fillna(master["Year.born"])
-    master["First.year"] = master["First.year"].fillna(master["Last.year"])
-    master["Last.year"] = master["Last.year"].fillna(master["First.year"])
+    # first year alive: the earliest year the bird is known to have been alive (year born, first year seen, or earliest year recorded),
+    # or the last year seen if none are known; last year alive: the last year seen, or the first year alive if unknown
+    master["year"] = master[["Year.born", "First.year", "First.year.min"]].min(axis=1).fillna(master["Last.year"])
+    master["last.year"] = master["Last.year"].fillna(master["year"])
 
     # update the newest lineage classifications and add generations from the founder
     bbs_lines = pd.read_csv(BIG_BIRDS)
@@ -63,13 +62,13 @@ def load_master(island="Daphne"):
 
 
 def first_offspring_year(master):
-    """First year any descendant of the founder was observed (1987)."""
-    return master[master["Species"].isin(DESCENDANT_LINEAGES)]["First.year"].min()
+    """First year any descendant of the founder was alive (1987)."""
+    return master[master["Species"].isin(DESCENDANT_LINEAGES)]["year"].min()
 
 
 def negative_controls(master):
-    """Birds first observed before any of the founder's descendants (excluding the founder)."""
-    is_early = master["First.year"] < first_offspring_year(master)
+    """Birds alive before any of the founder's descendants (excluding the founder)."""
+    is_early = master["year"] < first_offspring_year(master)
     return master[is_early & (master["meaningful.unique"] != FOUNDER)]
 
 

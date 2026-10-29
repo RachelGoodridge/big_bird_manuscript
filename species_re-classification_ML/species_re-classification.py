@@ -1,3 +1,6 @@
+import importlib.util
+import os
+import sys
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
@@ -15,13 +18,18 @@ from scipy.optimize import fsolve
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import accuracy_score
 
-# make plot theme more like R
-custom_params = {"font.family": "DejaVu Sans", "axes.facecolor": "white", "axes.edgecolor": "#DCDCDC", "axes.linewidth": 1.2, "axes.grid": True,
-    "grid.color": "#EAEAEA", "grid.linestyle": "-", "grid.linewidth": 0.5, "xtick.color": "black", "ytick.color": "black", "xtick.major.size": 0,
-    "ytick.major.size": 0}
-sns.set_style("whitegrid", rc=custom_params)
-plt.rcParams.update(custom_params)
-color_map_hex = {"fortis": "#1C86EE", "scandens": "#43CD80", "fuliginosa": "#C6E2FF", "hybrid": "#AB82FF"}
+# figures are saved next to this script, so it works from any working directory
+HERE = os.path.dirname(os.path.abspath(__file__))
+REPO = os.path.dirname(HERE)
+
+# reuse the bird metadata, beak PCs, colors, and plot theme from figures_ibis (loaded by path since all are named common.py)
+_spec = importlib.util.spec_from_file_location("figures_common", f"{REPO}/figures_ibis/scripts/common.py")
+sys.modules["figures_common"] = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(sys.modules["figures_common"])
+from figures_common import COLOR_MAP, add_bill_pcs, load_master, set_plot_theme
+
+set_plot_theme()
+color_map_hex = {spp: COLOR_MAP[spp] for spp in ["fortis", "scandens", "fuliginosa", "hybrid"]}
 # species epithets get italicized in figure text/legends
 SPECIES_NAMES = {"fortis", "scandens", "fuliginosa"}
 
@@ -33,36 +41,15 @@ np.random.seed(seed)
 ####################################################################################
 # PCA
 
-# first get the master database and filter
-master = pd.read_csv("/local/storage/all_birds_highcov_lowcov/Finch_Database_V2.csv")
-master.drop_duplicates(subset=["meaningful.unique"], inplace=True)
-master = master[master["Island"] == "Daphne"].copy()
-
-# fill in missing years with the minimum year, year born, or last year
-master["First.year"] = master["First.year"].fillna(master["First.year.min"])
-master["First.year"] = master["First.year"].fillna(master["Year.born"])
-master["First.year"] = master["First.year"].fillna(master["Last.year"])
-master["Last.year"] = master["Last.year"].fillna(master["First.year"])
-
-# update the newest lineage classifications
-bbs_lines = pd.read_csv("/local/storage/BigBirds/BigBirds.csv")
-bbs_lines.drop_duplicates(subset=["meaningful.unique"], inplace=True)
-master["lineage"] = master["meaningful.unique"].map(bbs_lines.set_index("meaningful.unique")["lineage"])
-master["lineage"] = master["lineage"].fillna(master["Species"])
-master = master.drop(columns=["Species"]).rename(columns={"lineage": "Species"})
-
-# filter to only the species of interest
+# Daphne birds (first year alive, lineages, and species corrections as in every other analysis) of the species of interest
+master = load_master()
 master = master[master["Species"].isin(["scandens", "fortis", "hybrid", "fuliginosa"])]
 master.set_index("meaningful.unique", inplace=True)
-master = master[["Species", "First.year", "bill.length", "bill.depth", "bill.width", "weight"]].dropna().copy()
+master = master[["Species", "year", "bill.length", "bill.depth", "bill.width", "weight"]].dropna().copy()
 
-# PC1/PC2 of bill dimensions -> beak size / beak pointedness
-bill_scaled = StandardScaler().fit_transform(master[["bill.length", "bill.depth", "bill.width"]])
-pca = PCA(n_components=2)
-bill_pcs = pca.fit_transform(bill_scaled)
-exp_var1, exp_var2 = pca.fit(bill_scaled).explained_variance_ratio_
-master["PC(Beak Size)"] = bill_pcs[:, 0]
-master["PC(Beak Pointedness)"] = bill_pcs[:, 1]
+# PC1/PC2 of bill dimensions -> beak size / beak pointedness (signed so larger values mean bigger / more pointed beaks)
+master = add_bill_pcs(master)
+exp_var1, exp_var2 = PCA(n_components=2).fit(StandardScaler().fit_transform(master[["bill.length", "bill.depth", "bill.width"]])).explained_variance_ratio_
 
 # compute beak dimensions
 master["pointy"] = master["bill.length"] / master["bill.depth"]
@@ -79,7 +66,7 @@ for text in leg.get_texts():
         text.set_fontstyle("italic")
 sns.despine(top=True, right=True, left=True, bottom=True)
 plt.tight_layout()
-plt.savefig("beak_traits_pca.png", dpi=450, bbox_inches="tight", pad_inches=0.05)
+plt.savefig(f"{HERE}/beak_traits_pca.png", dpi=450, bbox_inches="tight", pad_inches=0.05)
 plt.close()
 
 # plot PC1 vs. sum of beak traits
@@ -93,7 +80,7 @@ for text in leg.get_texts():
         text.set_fontstyle("italic")
 sns.despine(top=True, right=True, left=True, bottom=True)
 plt.tight_layout()
-plt.savefig("pc1_vs_sum.png", dpi=450, bbox_inches="tight", pad_inches=0.05)
+plt.savefig(f"{HERE}/pc1_vs_sum.png", dpi=450, bbox_inches="tight", pad_inches=0.05)
 plt.close()
 
 # plot PC2 vs. pointedness
@@ -107,7 +94,7 @@ for text in leg.get_texts():
         text.set_fontstyle("italic")
 sns.despine(top=True, right=True, left=True, bottom=True)
 plt.tight_layout()
-plt.savefig("pc2_vs_pointy.png", dpi=450, bbox_inches="tight", pad_inches=0.05)
+plt.savefig(f"{HERE}/pc2_vs_pointy.png", dpi=450, bbox_inches="tight", pad_inches=0.05)
 plt.close()
 
 ####################################################################################
@@ -117,8 +104,8 @@ plt.close()
 master = master[master["Species"] != "hybrid"].copy()
 
 # get the admixture info
-data = pd.read_csv("/SSD/reg259/big_bird_manuscript/ancestry_estimates/whole_data_new/admixture/finches.9.Q", sep="\\s+", header=None)
-fam = pd.read_csv("/SSD/reg259/big_bird_manuscript/ancestry_estimates/whole_data_new/admixture/finches.fam", sep="\\s+", header=None)
+data = pd.read_csv(f"{REPO}/ancestry_estimates/whole_data_new/admixture/finches.9.Q", sep="\\s+", header=None)
+fam = pd.read_csv(f"{REPO}/ancestry_estimates/whole_data_new/admixture/finches.fam", sep="\\s+", header=None)
 data.index = fam[1]
 
 # add the admixture info to the master dataframe
@@ -130,8 +117,8 @@ for anc in ["anc_fort", "anc_scan", "anc_fuli"]:
 master.dropna(inplace=True)
 
 # select training and test data
-training = master[master["First.year"] != 2022].copy()
-test = master[master["First.year"] == 2022].copy()
+training = master[master["year"] != 2022].copy()
+test = master[master["year"] == 2022].copy()
 features = ["PC(Beak Size)", "PC(Beak Pointedness)", "weight", "anc_fort", "anc_scan", "anc_fuli"]
 
 # function to find the outliers
@@ -217,7 +204,7 @@ plt.ylabel("PC2, Beak Pointedness")
 leg = plt.legend(title=None, handles=[train_handle, test_handle], loc="upper left")
 sns.despine(top=True, right=True, left=True, bottom=True)
 plt.tight_layout()
-plt.savefig("pca_rfc_ml.png", dpi=450, bbox_inches="tight", pad_inches=0.05)
+plt.savefig(f"{HERE}/pca_rfc_ml.png", dpi=450, bbox_inches="tight", pad_inches=0.05)
 plt.close()
 
 # now make a series of ancestry vs. PC1 plots
@@ -243,7 +230,7 @@ for i, anc, label in zip([0, 1, 2], ["anc_fort", "anc_scan", "anc_fuli"], labels
             text.set_fontstyle("italic")
 sns.despine(top=True, right=True, left=True, bottom=True)
 plt.tight_layout()
-plt.savefig("anc_vs_PC1.png", dpi=450, bbox_inches="tight", pad_inches=0.05)
+plt.savefig(f"{HERE}/anc_vs_PC1.png", dpi=450, bbox_inches="tight", pad_inches=0.05)
 plt.close()
 
 # now make a series of ancestry vs. PC2 plots
@@ -268,7 +255,7 @@ for i, anc, label in zip([0, 1, 2], ["anc_fort", "anc_scan", "anc_fuli"], labels
             text.set_fontstyle("italic")
 sns.despine(top=True, right=True, left=True, bottom=True)
 plt.tight_layout()
-plt.savefig("anc_vs_PC2.png", dpi=450, bbox_inches="tight", pad_inches=0.05)
+plt.savefig(f"{HERE}/anc_vs_PC2.png", dpi=450, bbox_inches="tight", pad_inches=0.05)
 plt.close()
 
 # print out the ones that changed

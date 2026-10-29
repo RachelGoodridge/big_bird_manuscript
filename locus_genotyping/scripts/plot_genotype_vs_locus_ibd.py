@@ -1,9 +1,11 @@
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from common import (COLOR_MAP, FOCAL_SPECIES, FOUNDER, GENOTYPES, LOCUS_IBD_COVERAGE, founder_ibd_per_bird, load_genotypes, load_loci, load_master,
                     locus_ibd_fraction, save_figure, set_plot_theme, style_legend)
 
 set_plot_theme()
+np.random.seed(0)  # fix the strip plot jitter so the figure is reproducible
 
 # fortis and scandens carrying any IBD with the founder, and the fraction of each locus their segments cover
 master = load_master()
