@@ -31,4 +31,4 @@ for ax, y_col, y_label, title in [
 
 # no legend: every bird in the drought data is fortis
 plt.tight_layout()
-save_figure("supplement/boxplot_survival_beak_size_IBD.png")
+save_figure("boxplot_survival_beak_size_IBD.png")

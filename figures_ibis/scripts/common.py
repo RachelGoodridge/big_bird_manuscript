@@ -17,7 +17,6 @@ from sklearn.preprocessing import StandardScaler
 FIGURES = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REPO = os.path.dirname(FIGURES)
 IBIS = f"{REPO}/tune_trim_ibis"
-DATA = f"{FIGURES}/data"
 GENOTYPING = f"{REPO}/locus_genotyping"  # large-effect beak loci positions and genotype calls
 
 # reuse the bird metadata and plot theme from the IBIS pipeline (loaded by path since both files are named common.py)
@@ -361,16 +360,3 @@ def format_year_axis(ax):
     ax.set_xlabel(None)
     ax.set_xticks(np.arange(1975, 2025, 5))
     ax.set_xlim(1977, 2024)
-
-
-# load the drought survival list (Erik's published table) for Daphne fortis, with IBD and beak size
-def load_drought_fortis(master):
-    drought_surv = pd.read_csv(f"{DATA}/table_of_drought_fortis.csv").set_index("meaningful.unique")["drought_surv"]
-    birds = master[master["meaningful.unique"].isin(drought_surv.index)].copy()
-    birds["outcome"] = birds["meaningful.unique"].map(drought_surv)
-    birds = birds[birds["Species"] == "fortis"].copy()
-    ibd = founder_ibd_per_bird(master).set_index("ind")["fraction_snps_ibd"]
-    birds["fraction_snps_ibd"] = birds["meaningful.unique"].map(ibd).fillna(0)
-    birds["has_ibd"] = birds["fraction_snps_ibd"] > 0
-    birds["beak_sum"] = birds["bill.length"] + birds["bill.depth"] + birds["bill.width"]
-    return birds

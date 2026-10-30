@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from matplotlib.lines import Line2D
 import seaborn as sns
-from common import DATA, FOCAL_SPECIES, GENOTYPING, ibd_window_frequencies, load_chromosomes, load_master, save_figure, set_plot_theme, style_legend
+from common import FOCAL_SPECIES, GENOTYPING, ibd_window_frequencies, load_chromosomes, load_master, save_figure, set_plot_theme, style_legend
 
 set_plot_theme()
 
