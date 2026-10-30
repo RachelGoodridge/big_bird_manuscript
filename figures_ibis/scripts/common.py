@@ -5,9 +5,11 @@ import numpy as np
 import pandas as pd
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
+import matplotlib.transforms as mtransforms
 import seaborn as sns
 from matplotlib.colors import Normalize
 from matplotlib.lines import Line2D
+from matplotlib.patches import Rectangle
 from pandas.api.types import CategoricalDtype
 from scipy import stats
 from sklearn.decomposition import PCA
@@ -103,6 +105,33 @@ def order_groups(df, groups, by="Species"):
     return df.sort_values(by=by)
 
 
+def plot_ibd_over_time(axes, birds, summary, point_scale=1, line_scale=1):
+    """Figure 2 panels: (a) each bird's fraction of SNPs in IBD, (b) yearly mean in fortis / scandens, (c) IBD segment carrier frequency.
+    Point sizes and line widths are multiplied by point_scale and line_scale.
+    Returns the legend handles and labels of panel a (it has every group), for one legend shared by all panels."""
+    ax_a, ax_b, ax_c = axes
+
+    # (a) individual scatter points
+    sns.scatterplot(x="Year", y="fraction_snps_ibd", hue="Species", palette=COLOR_MAP, data=birds, s=35 * point_scale, alpha=0.75, ax=ax_a, zorder=2)
+    ax_a.set_ylabel(IBD_LABEL)
+    ax_a.set_ylim(-0.02, 1.0)
+
+    # (b) average lines and (c) carrier frequency
+    for ax, y_col, y_label, y_lim in [(ax_b, "fraction_snps_ibd_mean", MEAN_IBD_LABEL, (-0.002, 0.077)),
+                                      (ax_c, "ibd_fraction", "IBD Segment Carrier Frequency", (-0.02, 0.77))]:
+        sns.lineplot(x="Year", y=y_col, hue="Species", palette=COLOR_MAP, data=summary, linewidth=1.5 * line_scale, ax=ax, zorder=2)
+        sns.scatterplot(x="Year", y=y_col, hue="Species", palette=COLOR_MAP, edgecolor="none", data=summary, s=25 * point_scale, ax=ax, zorder=3, legend=False)
+        ax.set_ylabel(y_label)
+        ax.set_ylim(*y_lim)
+
+    for ax in axes:
+        format_year_axis(ax)
+        ax.tick_params(axis="x", rotation=30)
+        ax.get_legend().remove()
+        sns.despine(top=True, right=True, left=False, bottom=False, ax=ax)
+    return ax_a.get_legend_handles_labels()
+
+
 def add_bill_pcs(df):
     """PCs of standardized bill length, depth, and width, signed so larger values mean bigger / more pointed beaks."""
     bill = df[["bill.length", "bill.depth", "bill.width"]]
@@ -124,6 +153,36 @@ def add_beak_body_ratio(df):
     beak_volume = df["bill.length"] * df["bill.depth"] * df["bill.width"]
     df["Beak:Body Ratio"] = StandardScaler().fit_transform(np.log(beak_volume / df["weight"]).to_frame()).ravel()
     return df
+
+
+############################ beak traits over time ############################
+def load_measured_fortis_scandens(master):
+    """Every fortis / scandens on Daphne with beak length, depth, and width (whether or not in the IBIS run), with years alive."""
+    birds = master[master["Species"].isin(FOCAL_SPECIES)].dropna(subset=["bill.length", "bill.depth", "bill.width"]).rename(columns={"meaningful.unique": "ind"})
+    return add_bird_info(birds, master)
+
+
+def yearly_trait_summary(birds, traits, min_birds=15):
+    """Per year and species, counting each bird in every year it was alive: mean, sd, coefficient of variation ((sd / mean) * 100,
+    as in Grant & Grant) and a point size for the number of birds. Years with fewer than min_birds birds of a species are dropped."""
+    alive = expand_years_alive(birds)
+    alive = alive[alive.groupby(["Year_alive", "Species"])["ind"].transform("size") >= min_birds]
+    grouped = alive.groupby(["Year_alive", "Species"])[list(traits)]
+    mean, sd = grouped.mean(), grouped.std()
+    n_birds = grouped.size()
+    return mean, sd, sd / mean * 100, 5 + 40 * n_birds / n_birds.max()
+
+
+def plot_trait_means(ax, mean, sd, point_size, trait, point_scale=1, line_scale=1):
+    """Yearly mean +/- sd of a trait for fortis and scandens (point size = number of birds).
+    Point sizes and line / error bar widths are multiplied by point_scale and line_scale."""
+    for spp in FOCAL_SPECIES:
+        years = mean.xs(spp, level="Species").index
+        m, s = mean.xs(spp, level="Species")[trait], sd.xs(spp, level="Species")[trait]
+        ax.errorbar(years, m, yerr=s, color=COLOR_MAP[spp], ecolor=COLOR_MAP[spp], elinewidth=0.8 * line_scale, capsize=2 * line_scale,
+                    capthick=plt.rcParams["lines.markeredgewidth"] * line_scale, alpha=0.6, linewidth=0, zorder=1)
+        ax.plot(years, m, color=COLOR_MAP[spp], linewidth=1.5 * line_scale, zorder=2, label=spp)
+        ax.scatter(years, m, s=point_size.xs(spp, level="Species") * point_scale, color=COLOR_MAP[spp], edgecolor="none", zorder=3)
 
 
 ############################ allometry ############################
@@ -316,17 +375,106 @@ def set_genome_plot_theme():
                          "xtick.color": "black", "ytick.color": "black", "xtick.major.size": 0, "ytick.major.size": 0})
 
 
-def add_freq_colorbar(fig, rect, cmap, vmax, label="IBD segment frequency"):
+def add_freq_colorbar(fig, rect, cmap, vmax, label="IBD segment frequency", fontsize=17):
     """Vertical colorbar of IBD segment frequency from 0 to vmax."""
     sm = cm.ScalarMappable(cmap=cmap, norm=Normalize(vmin=0, vmax=vmax))
     sm.set_array([])
     cb = fig.colorbar(sm, cax=fig.add_axes(rect))
-    cb.ax.tick_params(labelsize=17)
+    cb.ax.tick_params(labelsize=fontsize)
     tick_vals = np.linspace(0, vmax, 5)
     cb.set_ticks(tick_vals)
     cb.set_ticklabels([f"{v:.2f}" for v in tick_vals])
-    cb.set_label(label, fontsize=19, labelpad=10)
+    cb.set_label(label, fontsize=fontsize + 2, labelpad=10)
     return cb
+
+
+def plot_ibd_track(fig, ax, profiles, years, chr_dict, chrom_lengths, vmax, bin_size=0.1, fontsize=15, combine_from="21"):
+    """Manhattan-style tracks of IBD segment frequency: chromosomes laid end to end, one track per species and year
+    (fortis then scandens, years in the given order), colored by frequency on a 0 to vmax scale (gray where no IBD).
+    Chromosomes from combine_from onwards share one x tick label."""
+    chroms_ordered = list(chr_dict.keys())
+    ax.grid(False)
+    ax.set_facecolor("white")
+
+    # gap scales with the largest chromosome so tiny chromosomes stay visually distinct without wasting space on huge ones.
+    # Wide enough that the white axes background reads as a clear boundary instead of a thin separator line.
+    chrom_gap_mb = chrom_lengths.max() * 0.02
+    chrom_offset = {}
+    cum_pos = 0.0
+    for chrom in chroms_ordered:
+        chrom_offset[chrom] = cum_pos
+        cum_pos += chrom_lengths[chrom] + chrom_gap_mb
+    total_genome_mb = cum_pos - chrom_gap_mb
+
+    track_height = 0.5
+    row_pitch = track_height * 1.2  # vertical gap between rows of 0.1 track heights
+    track_rows = [(species, yr) for species in FOCAL_SPECIES for yr in years]
+    n_rows = len(track_rows)
+    cmap = plt.get_cmap("Reds")
+    norm = Normalize(vmin=0, vmax=vmax)
+
+    row_y0 = {}
+    for row_idx, (species, yr) in enumerate(track_rows):
+        y0 = (n_rows - 1 - row_idx) * row_pitch
+        row_y0[row_idx] = y0
+        for chrom in chroms_ordered:
+            x_off = chrom_offset[chrom]
+            ax.add_patch(Rectangle((x_off, y0), chrom_lengths[chrom], track_height, facecolor="#d8d8d8", edgecolor="none", zorder=1))
+            bc, fq = profiles[yr][(species, chrom)]
+            for bcenter, f in zip(bc, fq):
+                if f <= 0:
+                    continue
+                x_lo = x_off + max(bcenter - bin_size / 2, 0.0)
+                x_hi = x_off + min(bcenter + bin_size / 2, chrom_lengths[chrom])
+                if x_hi - x_lo <= 0:
+                    continue
+                ax.add_patch(Rectangle((x_lo, y0), x_hi - x_lo, track_height, facecolor=cmap(norm(f)), edgecolor="none", zorder=2))
+
+    # thin outline box around each species' rows (chromosome and row boundaries are shown by the white gaps)
+    species_row_indices = {}
+    for row_idx, (species, yr) in enumerate(track_rows):
+        species_row_indices.setdefault(species, []).append(row_idx)
+    for species, rows in species_row_indices.items():
+        block_y0 = row_y0[max(rows)]
+        block_y1 = row_y0[min(rows)] + track_height
+        ax.add_patch(Rectangle((0, block_y0), total_genome_mb, block_y1 - block_y0, facecolor="none", edgecolor="#333333", linewidth=1.0, zorder=5, clip_on=False))
+
+    ax.set_xlim(0, total_genome_mb)
+    ax.set_ylim(0, (n_rows - 1) * row_pitch + track_height)
+
+    # the tail of small chromosomes is too narrow for separate labels, so they are combined into one tick
+    split_idx = [chr_dict[c] for c in chroms_ordered].index(combine_from)
+    individual_chroms = chroms_ordered[:split_idx]
+    combined_chroms = chroms_ordered[split_idx:]
+    combined_x0 = chrom_offset[combined_chroms[0]]
+    combined_x1 = chrom_offset[combined_chroms[-1]] + chrom_lengths[combined_chroms[-1]]
+    ax.set_xticks([chrom_offset[c] + chrom_lengths[c] / 2 for c in individual_chroms] + [(combined_x0 + combined_x1) / 2])
+    ax.set_xticklabels([str(chr_dict[c]) for c in individual_chroms] + [f"{combine_from}-28, LGE22"], fontsize=fontsize)
+    ax.set_xlabel("Chromosome", fontsize=fontsize + 4, labelpad=8)
+
+    # unlabeled minor ticks: one centered in each inter-chromosome gap, plus one at the very start and end of the genome
+    boundary_ticks = [0.0] + [(chrom_offset[a] + chrom_lengths[a] + chrom_offset[b]) / 2 for a, b in zip(chroms_ordered[:-1], chroms_ordered[1:])] + [total_genome_mb]
+    ax.set_xticks(boundary_ticks, minor=True)
+    ax.tick_params(axis="x", which="minor", length=3, color="#aaaaaa", width=0.8)
+    ax.tick_params(axis="x", which="major", length=0)
+    ax.set_yticks([])
+
+    # two label columns hugging the left edge of the axis, both rotated vertical: species name spanning its rows,
+    # and the year of each row closer to the axis (offsets in points so the gap stays fixed regardless of the axes' width)
+    row_y_centers = [(n_rows - 1 - i) * row_pitch + track_height / 2 for i in range(n_rows)]
+    base_trans = mtransforms.blended_transform_factory(ax.transAxes, ax.transData)
+    species_trans = mtransforms.offset_copy(base_trans, fig=fig, x=-30, y=0, units="points")
+    year_trans = mtransforms.offset_copy(base_trans, fig=fig, x=-10, y=0, units="points")
+    for species, rows in species_row_indices.items():
+        y_center = (row_y_centers[min(rows)] + row_y_centers[max(rows)]) / 2
+        ax.text(0.0, y_center, r"$\it{" + species + "}$", transform=species_trans, ha="center", va="center", rotation=90, fontsize=fontsize, clip_on=False)
+    for row_idx, (species, yr) in enumerate(track_rows):
+        ax.text(0.0, row_y_centers[row_idx], f"{yr}", transform=year_trans, ha="center", va="center", rotation=90, fontsize=fontsize, clip_on=False)
+
+    ax.spines[["top", "right", "left"]].set_visible(False)
+    ax.spines["bottom"].set_color("#aaaaaa")
+    ax.spines["bottom"].set_linewidth(0.8)
+    ax.tick_params(axis="both", length=0)
 
 
 ############################ plot formatting ############################
