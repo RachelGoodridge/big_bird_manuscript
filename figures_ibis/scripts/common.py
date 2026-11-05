@@ -11,7 +11,8 @@ from matplotlib.colors import Normalize
 from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle
 from pandas.api.types import CategoricalDtype
-from scipy import stats
+from scipy import linalg, stats
+from scipy.optimize import minimize_scalar
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
@@ -20,6 +21,7 @@ FIGURES = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REPO = os.path.dirname(FIGURES)
 IBIS = f"{REPO}/tune_trim_ibis"
 GENOTYPING = f"{REPO}/locus_genotyping"  # large-effect beak loci positions and genotype calls
+ASSOCIATION = f"{REPO}/ibd_phenotype_association"  # LOCO GRMs and the IBD-phenotype association test
 
 # reuse the bird metadata and plot theme from the IBIS pipeline (loaded by path since both files are named common.py)
 _spec = importlib.util.spec_from_file_location("ibis_common", f"{IBIS}/scripts/common.py")
@@ -332,17 +334,11 @@ def make_windows(bim):
     return windows
 
 
-def ibd_window_frequencies(master):
-    """Proportion of fortis / scandens alive each year in IBD with the founder in each window (year x window table per species)."""
-    windows = make_windows(load_bim())
-    win_starts, win_ends = windows["start"].to_numpy(), windows["end"].to_numpy()
-
-    # trimmed segments of fortis and scandens (positions in bp), and the birds of each species alive each year
-    seg = add_bird_info(load_trimmed_segments(), master)
-    seg = seg[seg["Species"].isin(FOCAL_SPECIES)].reset_index(drop=True)
+def window_coverage(seg, windows):
+    """Fraction of every window (index into windows) covered by each bird's segments, for the windows each bird touches (columns ind, window,
+    coverage). A bird's segments never overlap each other, so their overlaps are summed. Segment positions in Mb, window positions in bp."""
+    seg = seg.reset_index(drop=True)
     starts_bp, ends_bp = np.rint(seg["phys_start_pos"] * 1e6), np.rint(seg["phys_end_pos"] * 1e6)
-    alive = expand_years_alive(founder_ibd_per_bird(master))
-    n_alive = alive[alive["Species"].isin(FOCAL_SPECIES)].groupby(["Species", "Year_alive"]).size()
 
     # length of each segment's overlap with every window it touches
     pieces = []
@@ -353,9 +349,24 @@ def ibd_window_frequencies(master):
             overlap = np.minimum(ends_bp[k], chrom_ends[lo:hi]) - np.maximum(starts_bp[k], chrom_starts[lo:hi])
             pieces.append(pd.DataFrame({"ind": seg.at[k, "ind"], "window": offset + np.arange(lo, hi), "overlap": overlap}))
 
-    # a bird is in IBD in a window if its segments (which never overlap each other) together cover at least 80% of the window
     covered = pd.concat(pieces).groupby(["ind", "window"], as_index=False)["overlap"].sum()
-    covered = covered[covered["overlap"] >= WINDOW_COVERAGE * (win_ends - win_starts)[covered["window"]]]
+    covered["coverage"] = covered["overlap"] / (windows["end"] - windows["start"]).to_numpy()[covered["window"]]
+    return covered.drop(columns="overlap")
+
+
+def ibd_window_frequencies(master):
+    """Proportion of fortis / scandens alive each year in IBD with the founder in each window (year x window table per species)."""
+    windows = make_windows(load_bim())
+
+    # trimmed segments of fortis and scandens, and the birds of each species alive each year
+    seg = add_bird_info(load_trimmed_segments(), master)
+    seg = seg[seg["Species"].isin(FOCAL_SPECIES)].reset_index(drop=True)
+    alive = expand_years_alive(founder_ibd_per_bird(master))
+    n_alive = alive[alive["Species"].isin(FOCAL_SPECIES)].groupby(["Species", "Year_alive"]).size()
+
+    # a bird is in IBD in a window if its segments together cover at least 80% of the window
+    covered = window_coverage(seg, windows)
+    covered = covered[covered["coverage"] >= WINDOW_COVERAGE]
 
     # count the birds in IBD in each window for every year they were alive
     birds = seg.drop_duplicates("ind").set_index("ind")[["Species", "Year", "Last_Year"]]
@@ -508,3 +519,46 @@ def format_year_axis(ax):
     ax.set_xlabel(None)
     ax.set_xticks(np.arange(1975, 2025, 5))
     ax.set_xlim(1977, 2024)
+
+
+############################ linear mixed model ############################
+def load_loco_grm(spp, chrom):
+    """GEMMA centered relatedness matrix of a species' birds built without one chromosome (IBIS chromosome code), and the bird IDs in its order."""
+    ids = pd.read_csv(f"{ASSOCIATION}/grm/{spp}/plink.fam", sep=r"\s+", header=None, usecols=[1], dtype=str)[1].to_list()
+    return np.loadtxt(f"{ASSOCIATION}/grm/{spp}/loco_chr{chrom}.cXX.txt"), ids
+
+
+def eigen_grm(K):
+    """Eigendecomposition of a relatedness matrix (eigenvalues below 1e-10 set to 0, as in GEMMA)."""
+    eigvals, eigvecs = np.linalg.eigh(K)
+    eigvals[eigvals < 1e-10] = 0
+    return eigvals, eigvecs
+
+
+def _ml_fit(eigvals, Uty, UtX):
+    """Maximum likelihood fit of y = Xb + g + e, with g ~ N(0, sg K) and e ~ N(0, se I), in the eigenbasis of K. The variance ratio
+    delta = se / sg is found on a log10 grid from -5 to 5 (as in GEMMA) and refined with Brent's method. Returns b and the log likelihood."""
+    n = len(Uty)
+
+    def neg_ll(log_delta):
+        d = eigvals + 10 ** log_delta
+        UtX_w = UtX / d[:, None]
+        b = linalg.solve(UtX_w.T @ UtX, UtX_w.T @ Uty, assume_a="pos")
+        sigma2 = np.sum((Uty - UtX @ b) ** 2 / d) / n
+        return 0.5 * (n * np.log(2 * np.pi * sigma2) + np.sum(np.log(d)) + n), b
+
+    grid = np.linspace(-5, 5, 41)
+    best = grid[np.argmin([neg_ll(x)[0] for x in grid])]
+    opt = minimize_scalar(lambda x: neg_ll(x)[0], bounds=(max(best - 0.25, -5), min(best + 0.25, 5)), method="bounded")
+    nll, b = neg_ll(opt.x)
+    return b, -nll
+
+
+def lmm_lrt(y, X, eig, test_col=1):
+    """Likelihood ratio test of one column of X in a linear mixed model with a relatedness matrix (eig = eigen_grm(K)) as a random effect,
+    as in GEMMA -lmm 2: the variance ratio is fit by maximum likelihood separately with and without the column. Returns its effect (beta) and p-value."""
+    eigvals, eigvecs = eig
+    Uty, UtX = eigvecs.T @ y, eigvecs.T @ X
+    b_full, ll_full = _ml_fit(eigvals, Uty, UtX)
+    _, ll_null = _ml_fit(eigvals, Uty, np.delete(UtX, test_col, axis=1))
+    return b_full[test_col], stats.chi2.sf(max(2 * (ll_full - ll_null), 0), df=1)

@@ -36,7 +36,7 @@ def set_plot_theme():
 
 
 def load_master(island="Daphne"):
-    """Birds from the master database (one island, or all if None) with missing first years filled and the newest lineage classifications."""
+    """Birds from the master database (one island, or all if None) with missing first years filled, sex coded 0 / 1, and the newest lineage classifications."""
     master = pd.read_csv(MASTER_DB)
     master.drop_duplicates(subset=["meaningful.unique"], inplace=True)
     if island is not None:
@@ -46,6 +46,9 @@ def load_master(island="Daphne"):
     # or the last year seen if none are known; last year alive: the last year seen, or the first year alive if unknown
     master["year"] = master[["Year.born", "First.year", "First.year.min"]].min(axis=1).fillna(master["Last.year"])
     master["last.year"] = master["Last.year"].fillna(master["year"])
+
+    # sex: the consensus sex, or the field sex code (1 = male, 2 = female) if unknown, coded male = 0 and female = 1 (missing if neither)
+    master["sex"] = master["sex.consensus"].fillna(master["Sex"].map({1: "Male", 2: "Female"})).map({"Male": 0, "Female": 1})
 
     # update the newest lineage classifications and add generations from the founder
     bbs_lines = pd.read_csv(BIG_BIRDS)

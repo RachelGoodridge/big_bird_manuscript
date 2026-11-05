@@ -4,7 +4,7 @@ cd "$(dirname "$0")"
 mkdir -p tuning tuning_plots
 
 PLINK2=/programs/plink2_linux_20230721/plink2
-IBIS=/SSD/reg259/IBIS/ibis/ibis  # v1.20.9 (commit 435a4fb)
+IBIS=/SSD/reg259/ibis/ibis  # v1.20.9 (commit 435a4fb)
 
 # extract just the inds for tuning
 TUNING_INDS=dataset/birds_for_tuning.txt
