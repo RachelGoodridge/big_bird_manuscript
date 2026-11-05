@@ -10,6 +10,7 @@ python scripts/fig_chr6_traits.py
 python scripts/fig_manhattan_track.py
 python scripts/fig_max_kin.py
 python scripts/fig_2_combined.py  # figure2a-c + PC(Beak Pointedness) over time + IBD tracks in one figure
+python scripts/fig_4_combined.py  # beak pointedness vs IBD (genome-wide, chr6 LMM) + scandens Manhattan (needs ibd_phenotype_association output)
 
 # supplementary figures
 python scripts/supp_relative_abundance.py

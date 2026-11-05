@@ -187,6 +187,44 @@ def plot_trait_means(ax, mean, sd, point_size, trait, point_scale=1, line_scale=
         ax.scatter(years, m, s=point_size.xs(spp, level="Species") * point_scale, color=COLOR_MAP[spp], edgecolor="none", zorder=3)
 
 
+############################ beak shape vs IBD ############################
+def load_ibd_beak_birds(master):
+    """Birds carrying IBD with the founder, with beak measurements and the beak PCs fit on them."""
+    birds = founder_ibd_per_bird(master)
+    birds = birds[birds["fraction_snps_ibd"] > 0].sort_values(by="ind")
+    birds = order_groups(birds, GROUPS)
+    for col in ["bill.length", "bill.depth", "bill.width"]:
+        birds[col] = birds["ind"].map(master.set_index("meaningful.unique")[col])
+    return add_bill_pcs(birds.dropna(subset=["bill.length", "bill.depth", "bill.width"]))
+
+
+def format_pvalue(p):
+    if p < 0.001:
+        return "p < 0.001"
+    elif p < 0.01:
+        return "p < 0.01"
+    else:
+        return f"p = {p:.2f}"
+
+
+def plot_beak_vs_ibd(ax, birds, y_col, show_legend, point_size=25, line_width=2, stats_fontsize="small", stats_y=(1.11, 1.03)):
+    """A beak trait against the genome-wide fraction of SNPs in IBD for every group, with a linear fit (and R^2, p) for fortis and scandens
+    (stats printed above the panel at heights stats_y, in axes fractions)."""
+    sns.scatterplot(x="fraction_snps_ibd", y=y_col, hue="Species", palette=COLOR_MAP, data=birds, s=point_size, alpha=0.75, ax=ax, zorder=2, legend=show_legend)
+
+    for y_text, (species, group) in zip(stats_y, birds[birds["Species"].isin(FOCAL_SPECIES)].groupby("Species", observed=True)):
+        fit = stats.linregress(group["fraction_snps_ibd"], group[y_col])
+        x_sorted = np.sort(group["fraction_snps_ibd"])
+        ax.plot(x_sorted, fit.intercept + fit.slope * x_sorted, color=COLOR_MAP[species], linewidth=line_width)
+        label = rf"$\it{{{species}}}$: $R^2$ = {fit.rvalue ** 2:.3f}, {format_pvalue(fit.pvalue)}"
+        ax.text(0.03, y_text, label, transform=ax.transAxes, va="bottom", ha="left", fontsize=stats_fontsize, color=COLOR_MAP[species])
+
+    ax.set_xlabel(IBD_LABEL)
+    ax.set_ylabel(y_col)
+    ax.set_xlim(-0.02, 0.98)
+    sns.despine(top=True, right=True, left=True, bottom=True, ax=ax)
+
+
 ############################ allometry ############################
 def load_allometry_birds():
     """Daphne birds in the IBIS run, the founder, and Española conirostris, with IBD fraction and body / beak size PCs."""
