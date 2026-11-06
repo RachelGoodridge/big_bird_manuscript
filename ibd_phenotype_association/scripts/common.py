@@ -56,27 +56,60 @@ def loco_ibd_fractions():
     return (ibd.sum(axis=1).to_numpy()[:, None] - ibd) / (snps.sum() - snps)
 
 
-def chromosome_ibd_fractions():
-    """Fraction of each chromosome's SNPs in (trimmed) IBD with the founder, for every bird with IBD (bird x IBIS chromosome code)."""
-    ibd, snps = _ibd_snps_per_chromosome()
-    return ibd / snps
+REGION_COVERAGE = 0.5  # region test: birds whose IBD covers at least this fraction of the region, vs birds with none in it
+REGION_GROUPS = ["No IBD", f"IBD ≥ {REGION_COVERAGE:.0%}"]
+
+# region of chromosome 6 where beak pointedness is associated with IBD in scandens across the whole stretch (windows mostly p < 0.02,
+# falling off sharply on either side), tested as a whole in fig_chr6_traits.py and figure 4: chromosome name, start, end (bp)
+CHR6_REGION = ("6", 10_000_000, 30_500_000)
 
 
-def chromosome_test_birds(spp, chrom):
-    """A whole-chromosome version of the window test (chrom: IBIS chromosome code). The species' tested birds in the order of the chromosome's
-    LOCO GRM, with the fraction of the chromosome's SNPs in IBD (chr_ibd) and of the SNPs outside it (loco_ibd), and the GRM's eigendecomposition."""
+def region_test_birds(spp, chrom, start, end):
+    """A region-wide version of the window test (chrom: IBIS chromosome code, start / end in bp). The species' tested birds with at least
+    REGION_COVERAGE of the region covered by their (summed) IBD segments or none in it (ibd_group; birds with less are left out, like the
+    window test's toss group), in the order of the chromosome's LOCO GRM, with the fraction of SNPs in IBD outside the chromosome (loco_ibd),
+    and the eigendecomposition of the GRM of these birds."""
     K, ids = load_loco_grm(spp, chrom)
     birds = load_birds(spp).set_index("ind").loc[ids]
-    birds["chr_ibd"] = chromosome_ibd_fractions()[chrom].reindex(birds.index).fillna(0)
+    seg = load_trimmed_segments()
+    region = pd.DataFrame({"chrom": [chrom], "start": [start], "end": [end]})
+    birds["region_ibd"] = window_coverage(seg[seg["ind"].isin(birds.index)], region).set_index("ind")["coverage"].reindex(birds.index).fillna(0)
+    birds["ibd_group"] = np.select([birds["region_ibd"] >= REGION_COVERAGE, birds["region_ibd"] == 0], REGION_GROUPS[::-1], default="")
     birds["loco_ibd"] = loco_ibd_fractions()[chrom].reindex(birds.index).fillna(0)
-    return birds, eigen_grm(K)
+    keep = (birds["ibd_group"] != "").to_numpy()
+    return birds[keep], eigen_grm(K[np.ix_(keep, keep)])
 
 
-def chromosome_lmm(birds, eig, trait):
-    """LMM likelihood ratio test of a trait on the continuous fraction of the chromosome in IBD (birds, eig from chromosome_test_birds), with the
-    same covariates as the window test. Returns beta and the p-value."""
-    X = np.column_stack([np.ones(len(birds)), birds["chr_ibd"]] + [birds[c] for c in COVARIATES[trait]])
+def region_lmm(birds, eig, trait):
+    """LMM likelihood ratio test of a trait between the birds with and without IBD in the region (birds, eig from region_test_birds), with
+    the same GRM and covariates as the window test. Returns beta (the IBD group's difference) and the p-value."""
+    has_ibd = (birds["ibd_group"] == REGION_GROUPS[1]).astype(float)
+    X = np.column_stack([np.ones(len(birds)), has_ibd] + [birds[c] for c in COVARIATES[trait]])
     return lmm_lrt(birds[trait].to_numpy(dtype=float), X, eig)
+
+
+def format_lmm(beta, p):
+    p_str = f"p = {p:.3f}" if p >= 0.001 else f"p = {p:.1e}"
+    return f"Linear mixed model: β = {beta:.2f}, {p_str}"
+
+
+def plot_region_box(ax, birds, trait, beta, p, spp, stats_fontsize="small", point_size=12, seed=1):
+    """Every bird's trait value without and with IBD in the region (from region_test_birds), jittered (fixed seed) behind an outlined box plot,
+    with beta / p from region_lmm above it."""
+    sns.boxplot(data=birds, x="ibd_group", y=trait, order=REGION_GROUPS, fill=False, color="#333333", linewidth=1.5, width=0.55, showfliers=False,
+                zorder=2, ax=ax)
+    # points drawn after the boxes so the axis limits include every bird
+    rng = np.random.default_rng(seed)
+    for i, group in enumerate(REGION_GROUPS):
+        y = birds.loc[birds["ibd_group"] == group, trait]
+        ax.scatter(i + rng.uniform(-0.18, 0.18, len(y)), y, s=point_size, color=COLOR_MAP[spp], alpha=0.5, linewidth=0, zorder=1)
+    ax.set_xticks(range(len(REGION_GROUPS)))
+    ax.set_xticklabels([f"{group}\n(n = {(birds['ibd_group'] == group).sum()})" for group in REGION_GROUPS])
+    ax.set_xlabel(None)
+    ax.set_ylabel(trait)
+    ax.grid(axis="x", visible=False)
+    ax.text(0.5, 1.02, format_lmm(beta, p), transform=ax.transAxes, ha="center", va="bottom", fontsize=stats_fontsize, color="#333333")
+    sns.despine(top=True, right=True, left=True, bottom=True, ax=ax)
 
 
 def genome_layout():
