@@ -1,9 +1,11 @@
 ancestry_estimates/training_new/admixture/finches.*
-ancestry_estimates/training_new/plink/finches_pruned.*
 ancestry_estimates/training_new/plink/finches.*
+ancestry_estimates/training_new/plink/finches_pruned.*
 ancestry_estimates/whole_data_new/admixture/finches.*
 ancestry_estimates/whole_data_new/plink/finches.*
 ancestry_estimates/whole_data_old/finches.*
+chr6_haplotypes/scripts/__pycache__/
+chr6_haplotypes/work/
 drought_survivorship/scripts/__pycache__/
 epistasis/scripts/__pycache__/
 figures_ibis/scripts/__pycache__/
