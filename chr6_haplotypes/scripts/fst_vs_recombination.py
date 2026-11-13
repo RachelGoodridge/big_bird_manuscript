@@ -88,7 +88,7 @@ ax_scatter.legend(loc="upper right", fontsize=11, frameon=False)
 axes[0].plot(mid_mb, windows["fst"], color="#1a5276", linewidth=1, label="100 kb windows (step 50 kb)", zorder=2)
 axes[0].plot(mid_mb, windows["fst_expected"], color="black", linewidth=1, linestyle="--", label="Expected from recombination", zorder=3)
 axes[0].set_ylabel("Hudson FST")
-axes[0].set_title(f"FST, {species_label('conirostris')} + {species_label('magnirostris')} vs {species_label('scandens')} (no {ibd_label('IBD')})", loc="left")
+axes[0].set_title(f"FST, {species_label('conirostris')} + {species_label('magnirostris')} vs {species_label('scandens')} (No {ibd_label('IBD')})", loc="left")
 axes[0].set_ylim(0, 1)
 axes[0].legend(loc="upper right", fontsize=10, frameon=False, ncol=2)
 
