@@ -1,3 +1,4 @@
+import re
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -38,6 +39,16 @@ SPECIES_NAMES = {"fortis", "scandens", "conirostris", "magnirostris", "fuliginos
 def species_label(name):
     """A group's name as written in figures: species as an italic "G. fortis" (matplotlib math text), any other group unchanged."""
     return rf"$\it{{G.\,{name}}}$" if name in SPECIES_NAMES else name  # \, is the space that looks like an ordinary one after the period
+
+
+# identity by descent with the founder is written "IBD" with a subscript F in every figure
+IBD_F = r"$\mathrm{IBD_F}$"
+
+
+def ibd_label(text):
+    """A label as written in figures: every "IBD" in it gets its subscript F (matplotlib math text). The labels are kept as plain "IBD" in
+    the code and the data, and passed through this where they are drawn."""
+    return re.sub(r"\bIBD\b", lambda match: IBD_F, text)
 
 
 def set_plot_theme():

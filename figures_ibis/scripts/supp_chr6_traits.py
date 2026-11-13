@@ -3,6 +3,7 @@ import sys
 import pandas as pd
 import matplotlib.pyplot as plt
 from common import ASSOCIATION, load_chromosomes, save_figure, set_plot_theme, species_label
+from ibis_common import IBD_F
 
 # the IBD-phenotype association helpers (loaded by path since it is also named common.py)
 _spec = importlib.util.spec_from_file_location("association_common", f"{ASSOCIATION}/scripts/common.py")
@@ -27,6 +28,6 @@ print(stats)
 fig, axes = plt.subplots(2, 2, figsize=(10.6, 10))
 for ax, trait in zip(axes.flat, TRAITS):
     plot_region_box(ax, birds, trait, stats.loc[trait, "beta"], stats.loc[trait, "p_value"], spp)
-fig.suptitle(f"IBD on chr. {chrom_name} ({start / 1e6:g}-{end / 1e6:g} Mb) in " + species_label(spp))
+fig.suptitle(f"{IBD_F} on chr. {chrom_name} ({start / 1e6:g}-{end / 1e6:g} Mb) in " + species_label(spp))
 plt.tight_layout(h_pad=3, w_pad=3)  # extra room between panels
 save_figure(f"supplement/chr{chrom_name}_IBD_vs_traits.png")

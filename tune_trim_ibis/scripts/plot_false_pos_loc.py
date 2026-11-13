@@ -2,7 +2,7 @@ import math
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from common import assign_y_levels, load_chr_map, load_master, negative_controls, read_bed, set_plot_theme
+from common import assign_y_levels, ibd_label, load_chr_map, load_master, negative_controls, read_bed, set_plot_theme
 
 set_plot_theme()
 chr_dict = load_chr_map()
@@ -32,7 +32,7 @@ for ax, chrom in zip(axes, chroms):
         ax.axvspan(row["phys_start_pos"], row["phys_end_pos"], color="red", alpha=0.25, lw=0)
 
     ax.set_xlabel(f"Position (Mb) on Chromosome {chr_dict[chrom]}")
-    ax.set_ylabel("IBD Segment Count")
+    ax.set_ylabel(ibd_label("IBD Count"))
     sns.despine(top=True, right=True, left=True, bottom=True, ax=ax)
 
 for ax in axes[len(chroms):]:

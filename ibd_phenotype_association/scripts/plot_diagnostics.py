@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.stats import chi2
 from common import FOCAL_SPECIES, RESULTS, TRAITS, load_birds, save_figure, set_plot_theme, species_label
+from ibis_common import ibd_label
 
 set_plot_theme()
 df = pd.read_csv(RESULTS, dtype={"chrom": str})
@@ -40,7 +41,7 @@ for ax, (spp, trait) in zip(axes, panels):
     x = np.sort(sub["n_test"].unique())
     ax.scatter(sub["n_test"], sub["neg_log10_p"], s=2, alpha=0.5, color="#1a5276")
     ax.plot(x, slope * x + intercept, color="red", linewidth=1)
-    ax.set_xlabel("Birds in the test (IBD) group")
+    ax.set_xlabel(ibd_label("Birds in the test (IBD) group"))
     ax.set_ylabel("$-log_{10}$p-value")
     ax.set_title(species_label(spp) + f": {trait}")
     sns.despine(top=True, right=True, ax=ax)

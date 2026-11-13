@@ -4,6 +4,8 @@ import seaborn as sns
 from common import (COLOR_MAP, FOCAL_SPECIES, FOUNDER, GENOTYPES, LOCUS_IBD_COVERAGE, founder_ibd_per_bird, load_genotypes, load_loci, load_master,
                     locus_ibd_fraction, save_figure, set_plot_theme, style_legend)
 
+from ibis_common import ibd_label
+
 set_plot_theme()
 np.random.seed(0)  # fix the strip plot jitter so the figure is reproducible
 
@@ -23,7 +25,7 @@ for ax, locus in zip(axes.flat, load_loci()["name"]):
                   dodge=True, size=5, alpha=0.5, legend=ax is axes.flat[0], ax=ax, zorder=2)
     ax.axhline(LOCUS_IBD_COVERAGE, color="gray", linestyle="--", linewidth=1, zorder=0)
     ax.set_xlabel(None)
-    ax.set_ylabel("Fraction of Locus in IBD")
+    ax.set_ylabel(ibd_label("Fraction of Locus in IBD"))
     ax.set_title(f"Locus {locus} (founder {load_genotypes(locus)[FOUNDER]})")
     sns.despine(top=True, right=True, ax=ax)
 

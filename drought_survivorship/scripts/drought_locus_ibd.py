@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from common import GENOTYPING, load_chromosomes, load_drought_fortis, load_master, load_trimmed_segments, save_figure, set_plot_theme, style_legend
+from ibis_common import ibd_label
 
 set_plot_theme()
 birds = load_drought_fortis(load_master())
@@ -35,7 +36,7 @@ for i, name in enumerate(loci_pos["name"]):
     for j, status in enumerate(["no IBD", "IBD"]):
         n_died, n_total = counts.loc[status, "died"], counts.loc[status].sum()
         x = i + (j - 0.5) * bar_width
-        ax.bar(x, n_died / n_total, width=bar_width, color=ibd_colors[status], label=status if i == 0 else None)
+        ax.bar(x, n_died / n_total, width=bar_width, color=ibd_colors[status], label=ibd_label(status) if i == 0 else None)
         ax.text(x, n_died / n_total + 0.02, f"{n_died}/{n_total}", ha="center", va="bottom", fontsize="x-small")
 ax.set_xticks(range(len(loci_pos)))
 ax.set_xticklabels([f"Locus {name}" for name in loci_pos["name"]])

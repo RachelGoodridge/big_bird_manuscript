@@ -32,6 +32,7 @@ _spec = importlib.util.spec_from_file_location("association_common", f"{REPO}/ib
 sys.modules["association_common"] = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(sys.modules["association_common"])
 from association_common import CHR6_REGION, REGION_COVERAGE
+from ibis_common import ibd_label
 from figures_common import load_chromosomes, load_founder_coef, load_master, load_trimmed_segments, set_plot_theme, species_label, window_coverage
 
 CORE_BIRDS = 100  # reference birds of each species for the regional check (below)
@@ -40,9 +41,9 @@ CORE_BIRDS = 100  # reference birds of each species for the regional check (belo
 # ancestry is checked against MIN_ANCESTRY, and the most birds kept, those with the most ancestry (None: all). The magnirostris are the 39 with the most
 # magnirostris ancestry, so that the donors (below) number 50
 GROUPS = pd.DataFrame([
-    ("fortis",           f"{species_label('fortis')} (no IBD)",        "#1C86EE", "Daphne",   "fortis",       "fortis",       CORE_BIRDS),
-    ("scandens_no_ibd",  f"{species_label('scandens')} (no IBD)",      "#43CD80", "Daphne",   "scandens",     "scandens",     None),
-    ("scandens_ibd",     f"{species_label('scandens')} (IBD ≥ {REGION_COVERAGE:.0%})", "#1B6B3A", "Daphne",   "scandens",     "scandens",     None),
+    ("fortis",           ibd_label(f"{species_label('fortis')} (no IBD)"), "#1C86EE", "Daphne",   "fortis",       "fortis",       CORE_BIRDS),
+    ("scandens_no_ibd",  ibd_label(f"{species_label('scandens')} (no IBD)"), "#43CD80", "Daphne",   "scandens",     "scandens",     None),
+    ("scandens_ibd",     ibd_label(f"{species_label('scandens')} (IBD ≥ {REGION_COVERAGE:.0%})"), "#1B6B3A", "Daphne",   "scandens",     "scandens",     None),
     ("conirostris_esp",  f"{species_label('conirostris')} (Española)", "#FF3030", "Espanola", "conirostris",  "conirostris",  None),
     ("founder",          "founder",                                 "#FF3030", "Daphne",   "founder",      "conirostris",  None),
     ("magnirostris_dap", f"{species_label('magnirostris')} (Daphne)",  "#EEB422", "Daphne",   "magnirostris", "magnirostris", 39),

@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import seaborn as sns
-from common import COLOR_MAP, count_snps, load_founder_ibis, load_master, negative_controls, read_bim, set_plot_theme
+from common import COLOR_MAP, count_snps, ibd_label, load_founder_ibis, load_master, negative_controls, read_bim, set_plot_theme
 
 set_plot_theme()
 
@@ -26,8 +26,8 @@ neg_max_error = negative_controls(master)["fraction_snps_ibd"].max()
 plt.figure(figsize=(6.6, 5))
 sns.scatterplot(x="Generation", y="fraction_snps_ibd", hue="Species", palette=COLOR_MAP, data=master[~master["Generation"].isna()], s=50, alpha=0.7)
 plt.xlabel("Generations from the Founder")
-plt.ylabel("Fraction of all SNPs in IBD")
-plt.title("IBD Segments Detected with IBIS")
+plt.ylabel(ibd_label("Fraction of all SNPs in IBD"))
+plt.title(ibd_label("IBD Segments Detected with IBIS"))
 sns.despine(top=True, right=True, left=True, bottom=True)
 plt.legend(title=None)
 plt.tight_layout()
@@ -40,8 +40,8 @@ seg["Generation"] = seg["ind"].map(master.set_index("meaningful.unique")["Genera
 seg["Species"] = seg["ind"].map(master.set_index("meaningful.unique")["Species"])
 sns.boxplot(x="Generation", y="genetic_seg_length", hue="Species", palette=COLOR_MAP, data=seg[~seg["Generation"].isna()])
 plt.xlabel("Generations from the Founder")
-plt.ylabel("Distribution of IBD Segment Lengths (cM)")
-plt.title("IBD Segments Detected with IBIS")
+plt.ylabel(ibd_label("Distribution of IBD Segment Lengths (cM)"))
+plt.title(ibd_label("IBD Segments Detected with IBIS"))
 sns.despine(top=True, right=True, left=True, bottom=True)
 plt.legend(title=None, loc="upper right")
 plt.tight_layout()

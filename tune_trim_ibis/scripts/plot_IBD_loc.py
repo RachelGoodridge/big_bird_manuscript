@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from common import assign_y_levels, load_chr_map, read_bim, set_plot_theme
+from common import assign_y_levels, ibd_label, load_chr_map, read_bim, set_plot_theme
 
 set_plot_theme()
 chr_dict = load_chr_map()
@@ -29,7 +29,7 @@ for ax, chrom in zip(axes, chr_dict):
     chrom_pos = bim[bim["chrom"] == chrom]["pos"] / 1e6
     ax.set_xlim(chrom_pos.min(), chrom_pos.max())
     ax.set_xlabel(f"Physical Position (Mb) on Chromosome {chr_dict[chrom]}")
-    ax.set_ylabel("Freq. of IBD Segs")
+    ax.set_ylabel(ibd_label("Freq. of IBD Segs"))
     sns.despine(top=True, right=True, left=True, bottom=True, ax=ax)
 
 plt.tight_layout()
@@ -52,14 +52,14 @@ fig, axes = plt.subplots(1, 2, figsize=(12.8, 4.8))
 
 # Before trimming
 sns.histplot(data=seg_untrim, x="SNP_per_Mb", ax=axes[0])
-axes[0].set_ylabel("Number of IBD Segments")
+axes[0].set_ylabel(ibd_label("Number of IBD Segments"))
 axes[0].set_title("SNPs per Mb Before Trimming")
 axes[0].set_xlabel("SNPs per Mb")
 sns.despine(top=True, right=True, left=True, bottom=True, ax=axes[0])
 
 # After trimming
 sns.histplot(data=trim_seg, x="SNP_per_Mb", ax=axes[1])
-axes[1].set_ylabel("Number of IBD Segments")
+axes[1].set_ylabel(ibd_label("Number of IBD Segments"))
 axes[1].set_title("SNPs per Mb After Trimming")
 axes[1].set_xlabel("SNPs per Mb")
 sns.despine(top=True, right=True, left=True, bottom=True, ax=axes[1])

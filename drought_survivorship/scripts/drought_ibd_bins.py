@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy import stats
 from common import load_drought_fortis, load_master, save_figure, set_plot_theme
+from ibis_common import ibd_label
 
 set_plot_theme()
 birds = load_drought_fortis(load_master())
@@ -22,7 +23,7 @@ for i, (label, color) in enumerate(zip(bin_labels, ["#A9A9A9", "#BF5858"])):
     ax.bar(i, n_died / n_total, width=0.7, color=color)
     ax.text(i, n_died / n_total + 0.02, f"{n_died}/{n_total}", ha="center", va="bottom", fontsize="small")
 ax.set_xticks(range(len(bin_labels)))
-ax.set_xticklabels(bin_labels)
+ax.set_xticklabels([ibd_label(label) for label in bin_labels])
 ax.set_ylim(0, 1.1)
 ax.set_yticks(np.arange(0, 1.01, 0.2))
 ax.grid(axis="x", visible=False)

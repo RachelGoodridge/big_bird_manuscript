@@ -52,13 +52,13 @@ ax_e = fig.add_subplot(gs[3, :])
 box_e = ax_e.get_position()
 ax_e.set_position([box_e.x0, box_e.y0 + E_RAISE, box_e.width, box_e.height])  # its width is set below, once its labels can be measured
 
-plot_trait_means(ax_a, mean, sd, point_size, "PC(Beak Pointedness)", POINT_SCALE, LINE_SCALE)
+plot_trait_means(ax_a, mean, sd, point_size, "PC(Beak Pointedness)", POINT_SCALE, LINE_SCALE, error_bars=False)
 ax_a.set_ylabel("Mean PC(Beak Pointedness)")
 format_year_axis(ax_a)
 ax_a.tick_params(axis="x", rotation=30)
 sns.despine(top=True, right=True, left=False, bottom=False, ax=ax_a)
 
-handles, labels = plot_ibd_over_time([ax_b, ax_c, ax_d], birds, summary, POINT_SCALE, LINE_SCALE)
+handles, labels = plot_ibd_over_time([ax_b, ax_c, ax_d], birds, summary, POINT_SCALE, LINE_SCALE, bird_point_size=25)  # points as in a, c, d
 
 plot_ibd_track(fig, ax_e, profiles, YEARS, chr_dict, chrom_lengths, vmax, BIN_SIZE, fontsize=17, combine_from="17")
 

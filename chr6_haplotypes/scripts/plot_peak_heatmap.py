@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 from scipy.cluster.hierarchy import leaves_list, linkage
 from common import GROUPS, PEAK_REGIONS, WORK, donor_alleles, load_birds, load_genotypes, save_figure, set_plot_theme, species_label
+from ibis_common import ibd_label
 
 # heatmap of every bird's genotype (copies of the donor allele) at the SNPs in the FST peaks, the rows ordered by a tree of all the birds (UPGMA:
 # average linkage, cityblock distance on the plotted SNPs), drawn at the side with each bird's group
@@ -106,5 +107,5 @@ fig.legend([plt.Rectangle((0, 0), 1, 1, facecolor=GROUPS.loc[g, "color"], edgeco
            [GROUPS.loc[g, "label"] for g in ROW_GROUPS], loc="upper left", bbox_to_anchor=(1.01, 0.75), bbox_transform=ax.transAxes, frameon=False,
            fontsize=11)
 ax.set_title(f"Genotypes in the chr. 6 FST peak{'s' if len(peaks) > 1 else ''} ({sum(len(c) for c in peak_cols)} {SNPS} SNPs; {SHOWN_SCANDENS} of the "
-             f"{len(scandens)} {species_label('scandens')} without IBD shown)", pad=28)
+             f"{len(scandens)} {species_label('scandens')} without {ibd_label('IBD')} shown)", pad=28)
 save_figure("peak_heatmap.png", fig)

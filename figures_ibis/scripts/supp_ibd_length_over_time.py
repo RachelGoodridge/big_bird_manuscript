@@ -4,6 +4,7 @@ from matplotlib.colors import to_rgba
 from matplotlib.patches import Patch
 import seaborn as sns
 from common import COLOR_MAP, FOCAL_SPECIES, add_bird_info, expand_years_alive, load_master, load_trimmed_segments, save_figure, set_plot_theme, style_legend
+from ibis_common import ibd_label
 
 set_plot_theme()
 
@@ -31,7 +32,7 @@ for j, spp in enumerate(FOCAL_SPECIES):
 ax.set_xticks(range(len(years)))
 ax.set_xticklabels(years, rotation=90)
 ax.set_xlim(-0.6, len(years) - 0.4)
-ax.set_ylabel("IBD Segment Length (Mb)")
+ax.set_ylabel(ibd_label("IBD Segment Length (Mb)"))
 ax.grid(axis="x", visible=False)
 style_legend(ax, handles=[Patch(facecolor=to_rgba(COLOR_MAP[s], 0.4), edgecolor=COLOR_MAP[s], label=s) for s in FOCAL_SPECIES],
              loc="upper right")

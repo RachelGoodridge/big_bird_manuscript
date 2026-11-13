@@ -28,11 +28,11 @@ ASSOCIATION = f"{REPO}/ibd_phenotype_association"  # LOCO GRMs and the IBD-pheno
 _spec = importlib.util.spec_from_file_location("ibis_common", f"{IBIS}/scripts/common.py")
 sys.modules["ibis_common"] = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(sys.modules["ibis_common"])
-from ibis_common import COLOR_MAP, DESCENDANT_LINEAGES, FOUNDER, load_chr_map, load_master, negative_controls, read_bim, set_plot_theme, species_label
+from ibis_common import COLOR_MAP, DESCENDANT_LINEAGES, FOUNDER, load_chr_map, load_master, ibd_label, negative_controls, read_bim, set_plot_theme, species_label
 
 # axis label for the fraction of SNPs in IBD with the founder
-IBD_LABEL = "Genome-wide Proportion of SNPs in IBD"
-MEAN_IBD_LABEL = "Mean Proportion of SNPs in IBD"
+IBD_LABEL = ibd_label("Proportion of SNPs in IBD")
+MEAN_IBD_LABEL = ibd_label("Mean Proportion of SNPs in IBD")
 
 # groups of birds shown in the figures
 FOCAL_SPECIES = ["fortis", "scandens"]
@@ -104,20 +104,21 @@ def order_groups(df, groups, by="Species"):
     return df.sort_values(by=by)
 
 
-def plot_ibd_over_time(axes, birds, summary, point_scale=1, line_scale=1):
+def plot_ibd_over_time(axes, birds, summary, point_scale=1, line_scale=1, bird_point_size=35):
     """Figure 2 panels: (a) each bird's fraction of SNPs in IBD, (b) yearly mean in fortis / scandens, (c) IBD segment carrier frequency.
-    Point sizes and line widths are multiplied by point_scale and line_scale.
+    Point sizes and line widths are multiplied by point_scale and line_scale (bird_point_size: size of the points of panel a, the yearly means
+    being 25).
     Returns the legend handles and labels of panel a (it has every group), for one legend shared by all panels."""
     ax_a, ax_b, ax_c = axes
 
     # (a) individual scatter points
-    sns.scatterplot(x="Year", y="fraction_snps_ibd", hue="Species", palette=COLOR_MAP, data=birds, s=35 * point_scale, alpha=0.75, ax=ax_a, zorder=2)
+    sns.scatterplot(x="Year", y="fraction_snps_ibd", hue="Species", palette=COLOR_MAP, data=birds, s=bird_point_size * point_scale, alpha=0.75, ax=ax_a, zorder=2)
     ax_a.set_ylabel(IBD_LABEL)
     ax_a.set_ylim(-0.02, 1.0)
 
     # (b) average lines and (c) carrier frequency
     for ax, y_col, y_label, y_lim in [(ax_b, "fraction_snps_ibd_mean", MEAN_IBD_LABEL, (-0.002, 0.077)),
-                                      (ax_c, "ibd_fraction", "IBD Segment Carrier Frequency", (-0.02, 0.77))]:
+                                      (ax_c, "ibd_fraction", ibd_label("IBD Carrier Frequency"), (-0.02, 0.77))]:
         sns.lineplot(x="Year", y=y_col, hue="Species", palette=COLOR_MAP, data=summary, linewidth=1.5 * line_scale, ax=ax, zorder=2)
         sns.scatterplot(x="Year", y=y_col, hue="Species", palette=COLOR_MAP, edgecolor="none", data=summary, s=25 * point_scale, ax=ax, zorder=3, legend=False)
         ax.set_ylabel(y_label)
@@ -172,14 +173,15 @@ def yearly_trait_summary(birds, traits, min_birds=15):
     return mean, sd, sd / mean * 100, 5 + 40 * n_birds / n_birds.max()
 
 
-def plot_trait_means(ax, mean, sd, point_size, trait, point_scale=1, line_scale=1):
-    """Yearly mean +/- sd of a trait for fortis and scandens (point size = number of birds).
+def plot_trait_means(ax, mean, sd, point_size, trait, point_scale=1, line_scale=1, error_bars=True):
+    """Yearly mean +/- sd (the error bars, if wanted) of a trait for fortis and scandens (point size = number of birds).
     Point sizes and line / error bar widths are multiplied by point_scale and line_scale."""
     for spp in FOCAL_SPECIES:
         years = mean.xs(spp, level="Species").index
         m, s = mean.xs(spp, level="Species")[trait], sd.xs(spp, level="Species")[trait]
-        ax.errorbar(years, m, yerr=s, color=COLOR_MAP[spp], ecolor=COLOR_MAP[spp], elinewidth=0.8 * line_scale, capsize=2 * line_scale,
-                    capthick=plt.rcParams["lines.markeredgewidth"] * line_scale, alpha=0.6, linewidth=0, zorder=1)
+        if error_bars:
+            ax.errorbar(years, m, yerr=s, color=COLOR_MAP[spp], ecolor=COLOR_MAP[spp], elinewidth=0.8 * line_scale, capsize=2 * line_scale,
+                        capthick=plt.rcParams["lines.markeredgewidth"] * line_scale, alpha=0.6, linewidth=0, zorder=1)
         ax.plot(years, m, color=COLOR_MAP[spp], linewidth=1.5 * line_scale, zorder=2, label=spp)
         ax.scatter(years, m, s=point_size.xs(spp, level="Species") * point_scale, color=COLOR_MAP[spp], edgecolor="none", zorder=3)
 
@@ -421,7 +423,7 @@ def set_genome_plot_theme():
                          "xtick.color": "black", "ytick.color": "black", "xtick.major.size": 0, "ytick.major.size": 0})
 
 
-def add_freq_colorbar(fig, rect, cmap, vmax, label="IBD segment frequency", fontsize=17):
+def add_freq_colorbar(fig, rect, cmap, vmax, label=ibd_label("IBD frequency"), fontsize=17):
     """Vertical colorbar of IBD segment frequency from 0 to vmax."""
     sm = cm.ScalarMappable(cmap=cmap, norm=Normalize(vmin=0, vmax=vmax))
     sm.set_array([])
@@ -441,6 +443,9 @@ def plot_ibd_track(fig, ax, profiles, years, chr_dict, chrom_lengths, vmax, bin_
     chroms_ordered = list(chr_dict.keys())
     ax.grid(False)
     ax.set_facecolor("white")
+    # in a pdf the tracks (everything below zorder 3: the gray background and the colored bins) are saved as one image. As thousands of
+    # separate thin rectangles, some pdf viewers leave hairlines of the gray background between neighboring bins, which dulls the colors
+    ax.set_rasterization_zorder(3)
 
     # gap scales with the largest chromosome so tiny chromosomes stay visually distinct without wasting space on huge ones.
     # Wide enough that the white axes background reads as a clear boundary instead of a thin separator line.

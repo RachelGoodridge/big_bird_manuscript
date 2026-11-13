@@ -20,6 +20,8 @@ from genotyping_common import (GENOTYPES, LOCUS_IBD_COVERAGE, add_beak_body_rati
 
 # traits compared between genotype combinations, with short names for file names
 TRAITS = {"PC(Body Size)": "body_size", "PC(Beak Size)": "beak_size", "Beak:Body Ratio": "beak_body_ratio"}
+from ibis_common import ibd_label
+
 SPECIES_NAMES = {"fortis", "scandens"}
 
 
@@ -72,6 +74,8 @@ def plot_mean_heatmap(means, ns, locus1, locus2, trait, title, path):
     norm = mcolors.TwoSlopeNorm(vmin=np.nanmin(values), vcenter=np.nanmean(values), vmax=np.nanmax(values))
     sns.heatmap(means.astype(float), annot=annot, fmt="", cmap="RdYlBu_r", norm=norm, linewidths=0.5, linecolor="white",
                 cbar_kws={"label": trait}, ax=ax)
+    ax.set_xticklabels([ibd_label(label) for label in means.columns])
+    ax.set_yticklabels([ibd_label(label) for label in means.index])
     ax.grid(False)
     ax.invert_yaxis()
     ax.tick_params(axis="y", rotation=0)

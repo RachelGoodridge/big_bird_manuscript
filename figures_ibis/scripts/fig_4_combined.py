@@ -13,6 +13,8 @@ sys.modules["association_common"] = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(sys.modules["association_common"])
 from association_common import CHR6_REGION, genome_layout, load_results, plot_manhattan, plot_region_box, region_lmm, region_test_birds
 
+from ibis_common import IBD_F
+
 set_plot_theme()
 SPP = "scandens"
 TRAIT = "PC(Beak Pointedness)"
@@ -50,10 +52,10 @@ plot_beak_vs_ibd(ax_a, ibd_birds, TRAIT, show_legend=True, stats_y=(1.075, 1.02)
 style_legend(ax_a, loc="upper right")
 
 plot_region_box(ax_b, birds, TRAIT, beta, p, SPP)
-ax_b.set_title(f"IBD on chr. {CHROM} ({START / 1e6:g}-{END / 1e6:g} Mb) in " + species_label(SPP), pad=30)
+ax_b.set_title(f"{IBD_F} on chr. {CHROM} ({START / 1e6:g}-{END / 1e6:g} Mb) in " + species_label(SPP), pad=30)
 
 plot_manhattan(ax_c, manhattan, genome, SPP, "neg_log10_p", "$-log_{10}$p-value", show_threshold=True, point_size=8, tick_fontsize=11, combine_from="17")
-ax_c.set_title(r"Association of $\mathrm{IBD_{F}}$ with " + f"{TRAIT} in " + species_label(SPP), loc="left", pad=16)  # left so the arrow from chr. 6 clears it
+ax_c.set_title(f"Association of {IBD_F} with {TRAIT} in " + species_label(SPP), loc="left", pad=16)  # left so the arrow from chr. 6 clears it
 
 # gray band behind the chromosome 6 region in (c), with an arrow from it up to (b)
 region_start, region_end = genome.loc[CHROM, "start"] + START, genome.loc[CHROM, "start"] + END

@@ -5,6 +5,7 @@ from matplotlib.collections import LineCollection
 from matplotlib.lines import Line2D
 import seaborn as sns
 from common import FOCAL_SPECIES, GENOTYPING, ibd_window_frequencies, load_chromosomes, load_master, save_figure, set_plot_theme, species_label, style_legend
+from ibis_common import ibd_label
 
 set_plot_theme()
 
@@ -44,7 +45,7 @@ for ax, spp in zip(axes, FOCAL_SPECIES):
     ax.set_ylim(0, max(f.to_numpy().max() for f in freqs.values()) * 1.02)
     sns.despine(top=True, right=True, ax=ax)
 
-axes[0].set_ylabel("Proportion of Individuals in IBD")
+axes[0].set_ylabel(ibd_label("Proportion of Individuals in IBD"))
 style_legend(axes[0], handles=[Line2D([0], [0], color=colors[locus], lw=0.75, label=locus) for locus in loci_wins], loc="upper left")
 plt.tight_layout()
 save_figure("supplement/IBDrw_allele_freqs_over_time.png", fig)

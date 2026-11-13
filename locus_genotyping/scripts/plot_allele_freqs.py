@@ -5,6 +5,8 @@ from matplotlib.patches import Patch
 from common import (COLOR_MAP, FOCAL_SPECIES, FOUNDER, LOCUS_IBD_COVERAGE, expand_years_alive, founder_ibd_per_bird, load_genotypes,
                     load_loci, load_master, locus_ibd_fraction, save_figure, set_plot_theme, species_label, style_legend)
 
+from ibis_common import ibd_label
+
 set_plot_theme()
 
 # fortis and scandens in the IBIS run, and whether each is in IBD with the founder at each locus
@@ -41,7 +43,7 @@ for ax, locus in zip(axes.flat, load_loci()["name"]):
             prop = yearly["in_ibd"].mean()
             ax.fill_between(prop.index, prop.astype(float), color=COLOR_MAP[spp], alpha=0.5, linewidth=0)
 
-    ax.set_ylabel(f"Frequency of '{allele}' Allele" if founder_gt[0] == founder_gt[1] else "Proportion of Individuals in IBD")
+    ax.set_ylabel(f"Frequency of '{allele}' Allele" if founder_gt[0] == founder_gt[1] else ibd_label("Proportion of Individuals in IBD"))
     ax.set_title(f"Locus {locus} (founder {founder_gt})")
     ax.set_xticks(range(1985, 2025, 10))
     ax.set_xlim(1983, 2024)  # few genotyped birds were alive before 1983
@@ -50,7 +52,7 @@ for ax, locus in zip(axes.flat, load_loci()["name"]):
 
 # one legend for all panels above them: each species' line (allele frequency) and shading (inherited from the founder)
 handles = [Line2D([0], [0], color=COLOR_MAP[spp], linewidth=1.5, label=spp) for spp in FOCAL_SPECIES]
-handles += [Patch(facecolor=COLOR_MAP[spp], alpha=0.5, label=f"{species_label(spp)} inherited from the founder (IBD)") for spp in FOCAL_SPECIES]
+handles += [Patch(facecolor=COLOR_MAP[spp], alpha=0.5, label=ibd_label(f"{species_label(spp)} inherited from the founder (IBD)")) for spp in FOCAL_SPECIES]
 style_legend(fig, handles=handles, loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=2, frameon=False)
 plt.tight_layout()
 save_figure("alleles_all_loci.png", fig)

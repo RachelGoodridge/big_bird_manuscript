@@ -30,7 +30,7 @@ TEXT        = "#2b2b2b"
 SEA_TEXT    = "#4f7f9c"          # "Pacific Ocean" and the title
 TITLE       = "Islas Galápagos"  # top right corner ("" for none)
 RED         = "#e8212b"          # route colour
-DIST_LABEL  = "~130 km"          # straight-line Española - Daphne Major distance
+DIST_LABEL  = None               # text along the route; None: the length of the route as drawn (the red dashed line), in km
 COAST_GAP_KM = 0.5               # how far offshore the route runs along Santa Cruz
 ROUTE_LW    = 1.2                # route line width (points)
 ROUTE_DASH  = (2.2, 1.6)         # dash length, gap length (in line widths)
@@ -70,6 +70,9 @@ def coastal_route():
 
 
 route, entry = coastal_route()
+GEOD = Geod(ellps="WGS84")
+ROUTE_KM = GEOD.line_length(route[:, 0], route[:, 1]) / 1000        # along the red dashed line
+STRAIGHT_KM = GEOD.inv(*ESPANOLA, *DAPHNE)[2] / 1000              # Española - Daphne Major in a straight line
 
 
 def draw_route(ax, lw, gap_deg=0.022):
@@ -126,7 +129,7 @@ def draw_map(ax, scale=1.0):
     draw_route(ax, ROUTE_LW * k)
     mid = (np.array(ESPANOLA) + entry) / 2
     ang = np.degrees(np.arctan2(entry[1] - ESPANOLA[1], ESPANOLA[0] - entry[0]))
-    ax.text(mid[0] + 0.012, mid[1] + 0.012, DIST_LABEL, color=RED, fontsize=8 * k,
+    ax.text(mid[0] + 0.012, mid[1] + 0.012, DIST_LABEL or f"{ROUTE_KM:.0f} km", color=RED, fontsize=8 * k,
             rotation=-ang, rotation_mode="anchor", ha="center", va="bottom", zorder=6)
 
     if SHOW_TOWNS:
@@ -180,9 +183,8 @@ def draw_map(ax, scale=1.0):
 
 
 if __name__ == "__main__":
-    geod = Geod(ellps="WGS84")
-    print(f"Straight-line distance: {geod.inv(*ESPANOLA, *DAPHNE)[2] / 1000:.0f} km")
-    print(f"Length of drawn route:  {geod.line_length(route[:, 0], route[:, 1]) / 1000:.0f} km")
+    print(f"Straight-line distance: {STRAIGHT_KM:.1f} km")
+    print(f"Length of drawn route:  {ROUTE_KM:.1f} km")
     set_theme()
     x0, x1, y0, y1 = EXTENT
     fig, ax = plt.subplots(figsize=(FIG_WIDTH, FIG_WIDTH * (y1 - y0) / (x1 - x0)))

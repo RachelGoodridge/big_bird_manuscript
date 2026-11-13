@@ -17,6 +17,7 @@ RESULTS = f"{OUTPUT}/ibd_phenotype_association.csv"
 _spec = importlib.util.spec_from_file_location("figures_common", f"{REPO}/figures_ibis/scripts/common.py")
 sys.modules["figures_common"] = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(sys.modules["figures_common"])
+from ibis_common import ibd_label
 from figures_common import (COLOR_MAP, FOCAL_SPECIES, WINDOW_COVERAGE, add_beak_body_ratio, add_bill_pcs, add_body_pc, eigen_grm, lmm_lrt,
                             load_bim, load_chromosomes, load_founder_coef, load_loco_grm, load_master, load_trimmed_segments, make_windows,
                             set_plot_theme, species_label, window_coverage)
@@ -104,7 +105,7 @@ def plot_region_box(ax, birds, trait, beta, p, spp, stats_fontsize="small", poin
         y = birds.loc[birds["ibd_group"] == group, trait]
         ax.scatter(i + rng.uniform(-0.18, 0.18, len(y)), y, s=point_size, color=COLOR_MAP[spp], alpha=0.5, linewidth=0, zorder=1)
     ax.set_xticks(range(len(REGION_GROUPS)))
-    ax.set_xticklabels([f"{group}\n(n = {(birds['ibd_group'] == group).sum()})" for group in REGION_GROUPS])
+    ax.set_xticklabels([f"{ibd_label(group)}\n(n = {(birds['ibd_group'] == group).sum()})" for group in REGION_GROUPS])
     ax.set_xlabel(None)
     ax.set_ylabel(trait)
     ax.grid(axis="x", visible=False)
