@@ -34,7 +34,8 @@ data$ind <- read.table("finches.fam")$V2
 records$con_anc <- data[[con_col]][match(records$ind, data$ind)]
 records <- records[!is.na(records$con_anc) & !is.na(records$start),]
 
-# color mapping
+# color mapping (species in the legend written with the genus, in italics)
+species_labels <- function(x) parse(text = paste0("italic('G. ", x, "')"))
 species_colors <- c(fortis = "dodgerblue2", scandens = "seagreen3")
 
 # one row per individual per year alive
@@ -50,8 +51,8 @@ boxplot_gg <- ggplot(box_data, aes(y = value, x = factor(year))) +
     geom_hline(yintercept = pretty(box_data$value, n = 6), color = "gray90", linewidth = 0.3) +
     geom_boxplot(aes(fill = Species, color = Species), position = position_dodge(width = 0.6), width = 0.5, outlier.shape = NA, alpha = 0.4, size = 0.3) +
     geom_point(data = outliers, aes(y = value, x = factor(year), color = Species), position = position_dodge(width = 0.6), size = 1, alpha = 0.6, shape = 16) +
-    scale_fill_manual(values = species_colors, name = NULL) + scale_color_manual(values = species_colors, name = NULL) + scale_x_discrete() +
-    labs(y = "Conirostris Ancestry", x = NULL, title = NULL) + theme(legend.position = "right", axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5,
+    scale_fill_manual(values = species_colors, name = NULL, labels = species_labels) + scale_color_manual(values = species_colors, name = NULL, labels = species_labels) + scale_x_discrete() +
+    labs(y = expression(italic("G. conirostris") ~ "Ancestry"), x = NULL, title = NULL) + theme(legend.position = "right", legend.text = element_text(hjust = 0), axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5,
     size = 11, margin = margin(t = -10), color = "black"), axis.ticks.x = element_blank(), axis.text.y = element_text(size=11, color = "black"),
     panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.title.x = element_text(size = 12))
 

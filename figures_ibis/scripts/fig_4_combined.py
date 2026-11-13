@@ -4,7 +4,8 @@ import matplotlib.pyplot as plt
 import matplotlib.transforms as mtransforms
 from matplotlib.gridspec import GridSpec
 from matplotlib.patches import ConnectionPatch
-from common import ASSOCIATION, load_chromosomes, load_ibd_beak_birds, load_master, plot_beak_vs_ibd, save_figure, set_plot_theme, style_legend
+from common import (ASSOCIATION, add_panel_letters, load_chromosomes, load_ibd_beak_birds, load_master, plot_beak_vs_ibd, save_figure, set_plot_theme,
+                    species_label, style_legend)
 
 # the IBD-phenotype association helpers (loaded by path since it is also named common.py)
 _spec = importlib.util.spec_from_file_location("association_common", f"{ASSOCIATION}/scripts/common.py")
@@ -49,10 +50,10 @@ plot_beak_vs_ibd(ax_a, ibd_birds, TRAIT, show_legend=True, stats_y=(1.075, 1.02)
 style_legend(ax_a, loc="upper right")
 
 plot_region_box(ax_b, birds, TRAIT, beta, p, SPP)
-ax_b.set_title(f"IBD on chr. {CHROM} ({START / 1e6:g}-{END / 1e6:g} Mb) in " + r"$\it{" + SPP + "}$", pad=30)
+ax_b.set_title(f"IBD on chr. {CHROM} ({START / 1e6:g}-{END / 1e6:g} Mb) in " + species_label(SPP), pad=30)
 
 plot_manhattan(ax_c, manhattan, genome, SPP, "neg_log10_p", "$-log_{10}$p-value", show_threshold=True, point_size=8, tick_fontsize=11, combine_from="17")
-ax_c.set_title(r"Association of $\mathrm{IBD_{F}}$ with " + f"{TRAIT} in " + r"$\it{" + SPP + "}$", loc="left", pad=16)  # left so the arrow from chr. 6 clears it
+ax_c.set_title(r"Association of $\mathrm{IBD_{F}}$ with " + f"{TRAIT} in " + species_label(SPP), loc="left", pad=16)  # left so the arrow from chr. 6 clears it
 
 # gray band behind the chromosome 6 region in (c), with an arrow from it up to (b)
 region_start, region_end = genome.loc[CHROM, "start"] + START, genome.loc[CHROM, "start"] + END
@@ -61,4 +62,6 @@ band_top = mtransforms.blended_transform_factory(ax_c.transData, ax_c.transAxes)
 fig.add_artist(ConnectionPatch(xyA=((region_start + region_end) / 2, 1.0), coordsA=band_top, xyB=ARROW_TIP, coordsB=ax_b.transAxes,
                                arrowstyle="-|>", color="darkgray", linewidth=1.5, mutation_scale=18))
 
-save_figure("main/figure4.png", fig)
+# each letter over its panel's y axis label, A and C under each other
+add_panel_letters(fig, [ax_a, ax_b, ax_c], align=[[0, 2]], anchor="label")
+save_figure("main/figure4.png", fig, pdf=True)

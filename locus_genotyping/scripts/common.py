@@ -17,7 +17,7 @@ _spec = importlib.util.spec_from_file_location("figures_common", f"{REPO}/figure
 sys.modules["figures_common"] = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(sys.modules["figures_common"])
 from figures_common import (COLOR_MAP, FOCAL_SPECIES, FOUNDER, GROUPS, add_beak_body_ratio, add_bill_pcs, add_body_pc, expand_years_alive, format_year_axis,
-                            founder_ibd_per_bird, load_chromosomes, load_master, load_trimmed_segments, set_plot_theme, style_legend)
+                            founder_ibd_per_bird, load_chromosomes, load_master, load_trimmed_segments, set_plot_theme, species_label, style_legend)
 
 # genotype calls from the GMM below this posterior probability are treated as missing
 GENOTYPE_CONFIDENCE = 0.99

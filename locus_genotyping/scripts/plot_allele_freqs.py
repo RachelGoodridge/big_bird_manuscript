@@ -3,7 +3,7 @@ import seaborn as sns
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 from common import (COLOR_MAP, FOCAL_SPECIES, FOUNDER, LOCUS_IBD_COVERAGE, expand_years_alive, founder_ibd_per_bird, load_genotypes,
-                    load_loci, load_master, locus_ibd_fraction, save_figure, set_plot_theme, style_legend)
+                    load_loci, load_master, locus_ibd_fraction, save_figure, set_plot_theme, species_label, style_legend)
 
 set_plot_theme()
 
@@ -50,7 +50,7 @@ for ax, locus in zip(axes.flat, load_loci()["name"]):
 
 # one legend for all panels above them: each species' line (allele frequency) and shading (inherited from the founder)
 handles = [Line2D([0], [0], color=COLOR_MAP[spp], linewidth=1.5, label=spp) for spp in FOCAL_SPECIES]
-handles += [Patch(facecolor=COLOR_MAP[spp], alpha=0.5, label=rf"$\it{{{spp}}}$ inherited from the founder (IBD)") for spp in FOCAL_SPECIES]
+handles += [Patch(facecolor=COLOR_MAP[spp], alpha=0.5, label=f"{species_label(spp)} inherited from the founder (IBD)") for spp in FOCAL_SPECIES]
 style_legend(fig, handles=handles, loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=2, frameon=False)
 plt.tight_layout()
 save_figure("alleles_all_loci.png", fig)

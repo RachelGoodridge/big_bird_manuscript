@@ -30,6 +30,16 @@ PLOT_THEME = {"font.family": "DejaVu Sans", "axes.facecolor": "white", "axes.edg
               "legend.fontsize": 12, "legend.title_fontsize": 12}
 
 
+# species are written with the genus, in italics, in every figure ("G. fortis"); the lineage groups (A line, B line, Big Birds, founder, hybrid,
+# unknown) are not species and stay upright
+SPECIES_NAMES = {"fortis", "scandens", "conirostris", "magnirostris", "fuliginosa"}
+
+
+def species_label(name):
+    """A group's name as written in figures: species as an italic "G. fortis" (matplotlib math text), any other group unchanged."""
+    return rf"$\it{{G.\,{name}}}$" if name in SPECIES_NAMES else name  # \, is the space that looks like an ordinary one after the period
+
+
 def set_plot_theme():
     sns.set_style("whitegrid", rc=PLOT_THEME)
     plt.rcParams.update(PLOT_THEME)

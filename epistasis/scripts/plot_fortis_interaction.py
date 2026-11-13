@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import statsmodels.formula.api as smf
 from statsmodels.stats.anova import anova_lm
-from common import TRAITS, cell_summary, load_birds, plot_mean_heatmap, save_figure, set_plot_theme
+from common import TRAITS, cell_summary, group_title, load_birds, plot_mean_heatmap, save_figure, set_plot_theme
 
 set_plot_theme()
 group, locus1, locus2, trait = "fortis", "G29", "G27", "PC(Beak Size)"
@@ -17,7 +17,7 @@ means, stds, ns = cell_summary(birds, locus1, locus2, trait, by_ibd=False)
 model = smf.ols(f"Q('{trait}') ~ C({locus1}) * C({locus2})", data=birds).fit()
 interaction = anova_lm(model, typ=2).loc[f"C({locus1}):C({locus2})"]
 print(f"{len(birds)} {group}: interaction F({int(interaction['df'])}, {int(model.df_resid)}) = {interaction['F']:.2f}, p = {interaction['PR(>F)']:.3g}")
-title = rf"$\it{{{group}}}$  |  {locus1} × {locus2}" + f"\ninteraction p = {interaction['PR(>F)']:.3g}"
+title = f"{group_title(group)}  |  {locus1} × {locus2}" + f"\ninteraction p = {interaction['PR(>F)']:.3g}"
 
 plot_mean_heatmap(means, ns, locus1, locus2, trait, title, f"{group}_{locus1}_x_{locus2}_{TRAITS[trait]}_mean.png")
 
@@ -32,16 +32,23 @@ x = np.arange(len(means.index))
 for color, g2 in zip(palette, means.columns):
     ax.errorbar(x, means[g2], yerr=ses[g2], label=g2, marker="o", linewidth=2.2, markersize=7, capsize=4, capthick=1.2, color=color)
 
-# residual labels just right of each point, spread apart vertically where they would overlap
+# residual labels placed clear of the lines: left of the first points and right of the last ones (no lines there; spread apart vertically
+# where they would overlap), and below right of the points in between (their lines leave upward to the right)
 min_gap = 0.07 * (means.max().max() - means.min().min())
 for xi, g1 in enumerate(means.index):
     label_y = means.loc[g1].sort_values()
     for i in range(1, len(label_y)):
         label_y.iloc[i] = max(label_y.iloc[i], label_y.iloc[i - 1] + min_gap)
+    if xi == 0:
+        place = dict(xytext=(-10, 0), ha="right", va="center")
+    elif xi == len(means.index) - 1:
+        place = dict(xytext=(10, 0), ha="left", va="center")
+    else:
+        place = dict(xytext=(9, -5), ha="left", va="top")
     for color, g2 in zip(palette, means.columns):
-        ax.annotate(f"{residuals.loc[g1, g2]:+.2f}", (xi, label_y[g2]), xytext=(10, 0), textcoords="offset points", ha="left", va="center",
-                    fontsize="x-small", color=color)
-ax.set_xlim(-0.2, len(x) - 0.6)
+        y = means.loc[g1, g2] if 0 < xi < len(means.index) - 1 else label_y[g2]
+        ax.annotate(f"{residuals.loc[g1, g2]:+.2f}", (xi, y), textcoords="offset points", fontsize="x-small", color=color, **place)
+ax.set_xlim(-0.45, len(x) - 0.6)
 ax.set_xticks(x, means.index)
 ax.xaxis.grid(False)
 ax.set_xlabel(locus1)

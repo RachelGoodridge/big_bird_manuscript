@@ -35,7 +35,11 @@ color_map_hex <- c(fortis = "#1C86EE", scandens = "#43CD80", fuliginosa = "#C6E2
                    magnirostris = "#EEB422", conirostris = "#8B4513", "B line" = "#FFAEB9", unknown = "#808080", "Big Birds" = "#800080")
 pca$Species <- ifelse(pca$Species %in% names(color_map_hex), pca$Species, "unknown")
 pca <- pca[pca$Species != "unknown",]
+# species are written with the genus, in italics ("G. fortis"), in legends; the lineages (A line, founder ...) stay upright
+species_names <- c("fortis", "scandens", "conirostris", "magnirostris", "fuliginosa")
+species_labels <- function(x) parse(text = ifelse(x %in% species_names, paste0("italic('G. ", x, "')"), paste0("'", x, "'")))
 pca <- pca[order(pca$Species == "founder"),] # draw founder last so its on top
-p <- ggplot(pca, aes(PC1, PC2, col = Species)) + geom_point(size = 1.5) + theme_light() + scale_color_manual(values = color_map_hex) +
+p <- ggplot(pca, aes(PC1, PC2, col = Species)) + geom_point(size = 1.5) + theme_light() + scale_color_manual(values = color_map_hex, labels = species_labels) +
+  theme(legend.text = element_text(hjust = 0)) +
   xlab(paste0("PC1 (", signif(pve$pve[1], 3), "%)")) + ylab(paste0("PC2 (", signif(pve$pve[2], 3), "%)"))
 ggsave("training_pca.png", plot = p, height = 5, width = 7, units = "in", dpi = 300)

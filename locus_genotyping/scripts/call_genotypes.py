@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib.lines import Line2D
 from sklearn.mixture import GaussianMixture
-from common import DATA, GENOTYPE_CONFIDENCE, GENOTYPES, GENOTYPING, OUTPUT, load_loci, load_master, save_figure, set_plot_theme
+from common import DATA, GENOTYPE_CONFIDENCE, GENOTYPES, GENOTYPING, OUTPUT, load_loci, load_master, save_figure, set_plot_theme, species_label
 
 set_plot_theme()
 os.makedirs(OUTPUT, exist_ok=True)
@@ -75,9 +75,9 @@ for locus in load_loci()["name"]:
     for text in leg.get_texts():
         if text.get_text() in ["Genotype", "Group", "Genotype source"]:
             text.set_fontweight("bold")
-        if text.get_text() in ["fortis", "scandens"]:
-            text.set_fontstyle("italic")
+        text.set_text(species_label(text.get_text()))  # species as an italic "G. fortis"
 
+    ax.xaxis.set_major_locator(plt.MaxNLocator(6))  # few enough ticks that their labels do not touch
     ax.set_xlabel(f"PC1 ({eigenval[0] / eigenval.sum() * 100:.1f}%)")
     ax.set_ylabel(f"PC2 ({eigenval[1] / eigenval.sum() * 100:.1f}%)")
     ax.set_title(f"Locus {locus}")

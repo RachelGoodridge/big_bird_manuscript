@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-from common import FOCAL_SPECIES, TRAITS, genome_layout, load_results, plot_manhattan, save_figure, set_plot_theme
+from common import FOCAL_SPECIES, TRAITS, genome_layout, load_results, plot_manhattan, save_figure, set_plot_theme, species_label
 
 set_plot_theme()
 genome = genome_layout()
@@ -13,7 +13,7 @@ def manhattan_grid(y_col, y_label, path, show_threshold):
         for row, trait in enumerate(TRAITS):
             ax = axes[row, col]
             plot_manhattan(ax, df[(df["species"] == spp) & (df["trait"] == trait)], genome, spp, y_col, y_label, show_threshold)
-            ax.set_title(f"{trait} in " + r"$\it{" + spp + "}$")
+            ax.set_title(f"{trait} in " + species_label(spp))
     plt.tight_layout()
     save_figure(path, fig)
 

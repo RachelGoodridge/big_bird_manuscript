@@ -5,7 +5,7 @@ import seaborn as sns
 from matplotlib.gridspec import GridSpec
 from scipy.optimize import least_squares
 from scipy.stats import spearmanr
-from common import CHROM, END, FST_WINDOWS, GMAP, OUTPUT, PEAK_REGIONS, START, WORK, save_figure, set_plot_theme
+from common import CHROM, END, FST_WINDOWS, GMAP, OUTPUT, PEAK_REGIONS, START, WORK, save_figure, set_plot_theme, species_label
 
 RESID_Z_THRESH = 3.5  # FST peaks: windows with FST at least this many SDs above that expected from their recombination rate
 LOSS_SCALE = 0.05   # residual size (FST units) beyond which the robust fit down-weights windows
@@ -87,7 +87,7 @@ ax_scatter.legend(loc="upper right", fontsize=11, frameon=False)
 axes[0].plot(mid_mb, windows["fst"], color="#1a5276", linewidth=1, label="100 kb windows (step 50 kb)", zorder=2)
 axes[0].plot(mid_mb, windows["fst_expected"], color="black", linewidth=1, linestyle="--", label="Expected from recombination", zorder=3)
 axes[0].set_ylabel("Hudson FST")
-axes[0].set_title("FST, conirostris + magnirostris vs scandens (no IBD)", loc="left")
+axes[0].set_title(f"FST, {species_label('conirostris')} + {species_label('magnirostris')} vs {species_label('scandens')} (no IBD)", loc="left")
 axes[0].set_ylim(0, 1)
 axes[0].legend(loc="upper right", fontsize=10, frameon=False, ncol=2)
 

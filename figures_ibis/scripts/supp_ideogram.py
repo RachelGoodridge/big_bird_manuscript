@@ -111,8 +111,8 @@ def draw_chromosome(ax, chrom_len_mb, max_len_mb, bin_centers, freq, x_center, h
 ########################### FIGURE LAYOUT ###########################
 def plot_ideogram(year_choice, profiles):
     SPECIES_CONFIG = {
-        "fortis":   {"cmap": "Blues",  "title": r"$\it{G.\ fortis}$ " + f"({year_choice})"},
-        "scandens": {"cmap": "Greens", "title": r"$\it{G.\ scandens}$ " + f"({year_choice})"},
+        "fortis":   {"cmap": "Blues",  "title": r"$\it{G.\,fortis}$ " + f"({year_choice})"},
+        "scandens": {"cmap": "Greens", "title": r"$\it{G.\,scandens}$ " + f"({year_choice})"},
     }
 
     top_chroms    = chroms_ordered[:15]

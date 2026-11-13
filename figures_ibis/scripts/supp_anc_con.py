@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from common import COLOR_MAP, GROUPS, IBD_LABEL, REPO, founder_ibd_per_bird, load_master, order_groups, save_figure, set_plot_theme, style_legend
+from common import COLOR_MAP, GROUPS, IBD_LABEL, REPO, founder_ibd_per_bird, load_master, order_groups, save_figure, set_plot_theme, species_label, style_legend
 
 set_plot_theme()
 
@@ -15,7 +15,7 @@ birds["anc_con"] = birds["ind"].map(anc.set_index("ind")[1])
 
 plt.figure(figsize=(7.04, 5.28))
 sns.scatterplot(x="anc_con", y="fraction_snps_ibd", hue="Species", palette=COLOR_MAP, data=birds, s=50, alpha=0.7)
-plt.xlabel("Conirostris Ancestry Proportion")
+plt.xlabel(f"{species_label('conirostris')} Ancestry Proportion")
 plt.ylabel(IBD_LABEL)
 sns.despine(top=True, right=True, left=True, bottom=True)
 style_legend(plt.gca(), title=None)

@@ -6,4 +6,4 @@ set_plot_theme()
 birds = load_allometry_birds()
 birds = birds[~birds["Species"].isin(["unknown", "Unknown"])]
 ground = birds[birds["Species"].isin(["fuliginosa", "fortis", "magnirostris"])]
-plot_allometry(birds, ground, r"fit to $\it{fuliginosa}$, $\it{fortis}$, and $\it{magnirostris}$", "supplement/allometry_ground.png")
+plot_allometry(birds, ground, r"fit to $\it{G.\,fuliginosa}$, $\it{G.\,fortis}$, and $\it{G.\,magnirostris}$", "supplement/allometry_ground.png")

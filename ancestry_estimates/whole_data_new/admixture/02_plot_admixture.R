@@ -51,7 +51,7 @@ allowed_combos <- tribble(
 all_records <- semi_join(all_records, allowed_combos, by = c("Species", "Island")) %>% select(-Island)
 
 # abbreviated x-axis labels; founder gets no label at all (it's a single individual, technically a conirostris)
-display_labels <- c(scandens = "scandens", fortis = "fortis", conirostris = "conirostris",
+display_labels <- c(scandens = "G. scandens", fortis = "G. fortis", conirostris = "G. conirostris",
                      founder = NA, "A line" = "A line", "B line" = "B line", "Big Birds" = "Big Birds")
 italic_size_factor <- 0.9
 
@@ -142,7 +142,7 @@ species_df <- data.frame(label = factor(names(species_ancestry), levels = names(
 other_df <- data.frame(label = factor("other ancestries"), x = 1, y = 1)
 legend_plot <- ggplot() +
   geom_col(data = species_df, aes(x = x, y = y, fill = label), alpha = 0) +
-  scale_fill_manual(values = highlight_colors, name = NULL, labels = parse(text = paste0("italic(", names(species_ancestry), ")")),
+  scale_fill_manual(values = highlight_colors, name = NULL, labels = parse(text = paste0("italic('G. ", names(species_ancestry), "')")),
                      guide = guide_legend(order = 1, override.aes = list(alpha = 1),
                                            theme = theme(legend.text = element_text(size = legend_text_size * italic_size_factor)))) +
   ggnewscale::new_scale_colour() +

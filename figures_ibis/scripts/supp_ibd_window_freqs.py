@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from matplotlib.lines import Line2D
 import seaborn as sns
-from common import FOCAL_SPECIES, GENOTYPING, ibd_window_frequencies, load_chromosomes, load_master, save_figure, set_plot_theme, style_legend
+from common import FOCAL_SPECIES, GENOTYPING, ibd_window_frequencies, load_chromosomes, load_master, save_figure, set_plot_theme, species_label, style_legend
 
 set_plot_theme()
 
@@ -37,7 +37,7 @@ for ax, spp in zip(axes, FOCAL_SPECIES):
         ax.add_collection(window_lines(freq, wins, color=colors[locus], linewidth=0.75, alpha=0.6, zorder=2))
     ax.plot(freq.index, freq.mean(axis=1), color="black", linewidth=2.0, alpha=0.9, zorder=3)
 
-    ax.set_title(spp, fontstyle="italic")
+    ax.set_title(species_label(spp))
     ax.set_xlabel(None)
     ax.set_xticks(np.arange(1990, 2025, 5))
     ax.set_xlim(1988, 2024)

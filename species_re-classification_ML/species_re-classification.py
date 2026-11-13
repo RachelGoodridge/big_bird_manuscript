@@ -26,11 +26,11 @@ REPO = os.path.dirname(HERE)
 _spec = importlib.util.spec_from_file_location("figures_common", f"{REPO}/figures_ibis/scripts/common.py")
 sys.modules["figures_common"] = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(sys.modules["figures_common"])
-from figures_common import COLOR_MAP, add_bill_pcs, load_master, set_plot_theme
+from figures_common import COLOR_MAP, add_bill_pcs, load_master, set_plot_theme, species_label
 
 set_plot_theme()
 color_map_hex = {spp: COLOR_MAP[spp] for spp in ["fortis", "scandens", "fuliginosa", "hybrid"]}
-# species epithets get italicized in figure text/legends
+# species are written as an italic "G. fortis" in figure legends
 SPECIES_NAMES = {"fortis", "scandens", "fuliginosa"}
 
 # set random seed
@@ -63,7 +63,7 @@ plt.ylabel(f"PC2, Beak Pointedness ({round(exp_var2*100, 2)}%)")
 leg = plt.legend(title=None)
 for text in leg.get_texts():
     if text.get_text() in SPECIES_NAMES:
-        text.set_fontstyle("italic")
+        text.set_text(species_label(text.get_text()))
 sns.despine(top=True, right=True, left=True, bottom=True)
 plt.tight_layout()
 plt.savefig(f"{HERE}/beak_traits_pca.png", dpi=450, bbox_inches="tight", pad_inches=0.05)
@@ -77,7 +77,7 @@ plt.ylabel("Sum of Beak Traits")
 leg = plt.legend(title=None)
 for text in leg.get_texts():
     if text.get_text() in SPECIES_NAMES:
-        text.set_fontstyle("italic")
+        text.set_text(species_label(text.get_text()))
 sns.despine(top=True, right=True, left=True, bottom=True)
 plt.tight_layout()
 plt.savefig(f"{HERE}/pc1_vs_sum.png", dpi=450, bbox_inches="tight", pad_inches=0.05)
@@ -91,7 +91,7 @@ plt.ylabel("Beak Pointedness")
 leg = plt.legend(title=None)
 for text in leg.get_texts():
     if text.get_text() in SPECIES_NAMES:
-        text.set_fontstyle("italic")
+        text.set_text(species_label(text.get_text()))
 sns.despine(top=True, right=True, left=True, bottom=True)
 plt.tight_layout()
 plt.savefig(f"{HERE}/pc2_vs_pointy.png", dpi=450, bbox_inches="tight", pad_inches=0.05)
@@ -207,55 +207,32 @@ plt.tight_layout()
 plt.savefig(f"{HERE}/pca_rfc_ml.png", dpi=450, bbox_inches="tight", pad_inches=0.05)
 plt.close()
 
-# now make a series of ancestry vs. PC1 plots
-labels = [r"$\mathit{fortis}$ ancestry", r"$\mathit{scandens}$ ancestry", r"$\mathit{fuliginosa}$ ancestry"]
-fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(23, 6))
-axs = axs.flatten()
-for i, anc, label in zip([0, 1, 2], ["anc_fort", "anc_scan", "anc_fuli"], labels):
-    sns.scatterplot(data=test[test["same"]], x=anc, y="PC(Beak Size)", hue="Species", palette=color_map_hex, s=30, alpha=0.6, zorder=2, ax=axs[i])
-    for spp, color in color_map_hex.items():
-        train_sub = training[training["Species"] == spp]
-        if not train_sub.empty:
-            axs[i].scatter(train_sub[anc], train_sub["PC(Beak Size)"], facecolors="none", edgecolors=color, marker="o",
-                           linewidths=0.8, s=20, alpha=0.5, zorder=1)
-        test_sub = different[different["prediction"] == spp]
-        if not test_sub.empty:
-            axs[i].scatter(test_sub[anc], test_sub["PC(Beak Size)"], c=test_sub["Species"].map(color_map_hex), edgecolors=color, marker="o",
-                           linewidths=1.5, s=50, alpha=0.75, zorder=3)
-    axs[i].set_xlabel(label)
-    axs[i].set_ylabel("PC1, Beak Size")
-    leg = axs[i].legend(title=None)
-    for text in leg.get_texts():
-        if text.get_text() in SPECIES_NAMES:
-            text.set_fontstyle("italic")
+# ancestry vs. beak PC plots: one row per PC (beak size, beak pointedness), one column per ancestry, each panel with its own axes, and a single
+# legend above
+ancestries = {"anc_fort": "fortis", "anc_scan": "scandens", "anc_fuli": "fuliginosa"}
+pcs = {"PC(Beak Size)": "PC1, Beak Size", "PC(Beak Pointedness)": "PC2, Beak Pointedness"}
+fig, axs = plt.subplots(nrows=len(pcs), ncols=len(ancestries), figsize=(23, 12))
+for row, (pc, pc_label) in enumerate(pcs.items()):
+    for col, (anc, spp_name) in enumerate(ancestries.items()):
+        ax = axs[row, col]
+        sns.scatterplot(data=test[test["same"]], x=anc, y=pc, hue="Species", palette=color_map_hex, s=30, alpha=0.6, zorder=2, ax=ax)
+        for spp, color in color_map_hex.items():
+            train_sub = training[training["Species"] == spp]
+            if not train_sub.empty:
+                ax.scatter(train_sub[anc], train_sub[pc], facecolors="none", edgecolors=color, marker="o", linewidths=0.8, s=20, alpha=0.5, zorder=1)
+            test_sub = different[different["prediction"] == spp]
+            if not test_sub.empty:
+                ax.scatter(test_sub[anc], test_sub[pc], c=test_sub["Species"].map(color_map_hex), edgecolors=color, marker="o", linewidths=1.5, s=50,
+                           alpha=0.75, zorder=3)
+        ax.set_xlabel(f"{species_label(spp_name)} ancestry")
+        ax.set_ylabel(pc_label)
+        handles, legend_labels = ax.get_legend_handles_labels()
+        ax.get_legend().remove()
 sns.despine(top=True, right=True, left=True, bottom=True)
 plt.tight_layout()
-plt.savefig(f"{HERE}/anc_vs_PC1.png", dpi=450, bbox_inches="tight", pad_inches=0.05)
-plt.close()
-
-# now make a series of ancestry vs. PC2 plots
-fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(23, 6))
-axs = axs.flatten()
-for i, anc, label in zip([0, 1, 2], ["anc_fort", "anc_scan", "anc_fuli"], labels):
-    sns.scatterplot(data=test[test["same"]], x=anc, y="PC(Beak Pointedness)", hue="Species", palette=color_map_hex, s=30, alpha=0.6, zorder=2, ax=axs[i])
-    for spp, color in color_map_hex.items():
-        train_sub = training[training["Species"] == spp]
-        if not train_sub.empty:
-            axs[i].scatter(train_sub[anc], train_sub["PC(Beak Pointedness)"], facecolors="none", edgecolors=color, marker="o",
-                           linewidths=0.8, s=20, alpha=0.5, zorder=1)
-        test_sub = different[different["prediction"] == spp]
-        if not test_sub.empty:
-            axs[i].scatter(test_sub[anc], test_sub["PC(Beak Pointedness)"], c=test_sub["Species"].map(color_map_hex), edgecolors=color, marker="o",
-                           linewidths=1.5, s=50, alpha=0.75, zorder=3)
-    axs[i].set_xlabel(label)
-    axs[i].set_ylabel("PC2, Beak Pointedness")
-    leg = axs[i].legend(title=None)
-    for text in leg.get_texts():
-        if text.get_text() in SPECIES_NAMES:
-            text.set_fontstyle("italic")
-sns.despine(top=True, right=True, left=True, bottom=True)
-plt.tight_layout()
-plt.savefig(f"{HERE}/anc_vs_PC2.png", dpi=450, bbox_inches="tight", pad_inches=0.05)
+fig.legend(handles, [species_label(name) for name in legend_labels], loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=len(handles), frameon=False,
+           fontsize=16, markerscale=2, handletextpad=0.1)
+plt.savefig(f"{HERE}/anc_vs_PCs.png", dpi=450, bbox_inches="tight", pad_inches=0.05)
 plt.close()
 
 # print out the ones that changed

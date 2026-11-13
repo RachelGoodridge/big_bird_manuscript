@@ -46,16 +46,17 @@ summarize_species <- function(species_name) {
     anc_scan = "scandens"), Species = species_name)}
 summary_all <- bind_rows(lapply(species_order, summarize_species))
 
-# Plotting function
+# Plotting function (species in the legend written with the genus, in italics)
+species_labels <- function(x) parse(text = paste0("italic('G. ", x, "')"))
 ancestry_colors <- c("fortis" = "dodgerblue2", "scandens" = "seagreen3")
 plot_species <- function(species_name, show_y, show_legend) {
   df <- summary_all %>% filter(Species == species_name)
   p <- ggplot(df, aes(x = year, y = mean, color = ancestry)) +
     geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd, color = ancestry, group = ancestry), width = 0.5, alpha = 0.8, linewidth = 0.5) +
-    geom_line(linewidth = 1) + geom_point(aes(size = n_alive), show.legend = FALSE) + scale_color_manual(values = ancestry_colors) +
+    geom_line(linewidth = 1) + geom_point(aes(size = n_alive), show.legend = FALSE) + scale_color_manual(values = ancestry_colors, labels = species_labels) +
     scale_size_continuous(name = "Number Alive") + theme_minimal(base_size = 15) + scale_y_continuous() + coord_cartesian(ylim = c(0, 1)) +
     labs(title = paste("G.", species_name), x = NULL, color = "Ancestry") +
-    theme(plot.title = element_text(hjust = 0.5, face = "italic"), legend.position = if (show_legend) "right" else "none")
+    theme(plot.title = element_text(hjust = 0.5, face = "italic"), legend.text = element_text(hjust = 0), legend.position = if (show_legend) "right" else "none")
   if (show_y) {
     p <- p + labs(y = "Mean Ancestry Proportion") + theme(plot.margin = margin(0.3, 0, 0, 0.3, unit = "cm"))}
   else {

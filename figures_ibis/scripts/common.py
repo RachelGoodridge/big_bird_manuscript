@@ -1,5 +1,6 @@
 import importlib.util
 import os
+import string
 import sys
 import numpy as np
 import pandas as pd
@@ -27,7 +28,7 @@ ASSOCIATION = f"{REPO}/ibd_phenotype_association"  # LOCO GRMs and the IBD-pheno
 _spec = importlib.util.spec_from_file_location("ibis_common", f"{IBIS}/scripts/common.py")
 sys.modules["ibis_common"] = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(sys.modules["ibis_common"])
-from ibis_common import COLOR_MAP, FOUNDER, load_chr_map, load_master, negative_controls, read_bim, set_plot_theme
+from ibis_common import COLOR_MAP, DESCENDANT_LINEAGES, FOUNDER, load_chr_map, load_master, negative_controls, read_bim, set_plot_theme, species_label
 
 # axis label for the fraction of SNPs in IBD with the founder
 IBD_LABEL = "Genome-wide Proportion of SNPs in IBD"
@@ -36,10 +37,6 @@ MEAN_IBD_LABEL = "Mean Proportion of SNPs in IBD"
 # groups of birds shown in the figures
 FOCAL_SPECIES = ["fortis", "scandens"]
 GROUPS = ["fortis", "scandens", "A line", "B line", "Big Birds"]
-
-# true species epithets get italicized in figure legends; lineage groups (A line, B line,
-# Big Birds, founder, hybrid, unknown) are not species and stay upright
-SPECIES_NAMES = {"fortis", "scandens", "conirostris", "magnirostris", "fuliginosa"}
 
 
 ############################ IBIS data ############################
@@ -216,7 +213,7 @@ def plot_beak_vs_ibd(ax, birds, y_col, show_legend, point_size=25, line_width=2,
         fit = stats.linregress(group["fraction_snps_ibd"], group[y_col])
         x_sorted = np.sort(group["fraction_snps_ibd"])
         ax.plot(x_sorted, fit.intercept + fit.slope * x_sorted, color=COLOR_MAP[species], linewidth=line_width)
-        label = rf"$\it{{{species}}}$: $R^2$ = {fit.rvalue ** 2:.3f}, {format_pvalue(fit.pvalue)}"
+        label = rf"{species_label(species)}: $R^2$ = {fit.rvalue ** 2:.3f}, {format_pvalue(fit.pvalue)}"
         ax.text(0.03, y_text, label, transform=ax.transAxes, va="bottom", ha="left", fontsize=stats_fontsize, color=COLOR_MAP[species])
 
     ax.set_xlabel(IBD_LABEL)
@@ -309,7 +306,7 @@ def plot_controls(ax, summary, y_col, y_label):
         ax.plot(founder["Year"], founder[y_col], color=colors[spp]["founder"], linewidth=2, marker="o", markersize=3.5, zorder=2)
 
     handles = [Line2D([0], [0], color=colors[spp][kind], lw=2 if kind != "control" else 0.8, marker="o" if kind == "founder" else None, markersize=3,
-                      label=rf"$\it{{{spp}}}$ – {label}")
+                      label=f"{species_label(spp)} – {label}")
                for kind, label in [("founder", "founder"), ("mean", "mean of controls"), ("control", "each control")] for spp in FOCAL_SPECIES]
     ax.set_ylabel(y_label)
     format_year_axis(ax)
@@ -516,7 +513,7 @@ def plot_ibd_track(fig, ax, profiles, years, chr_dict, chrom_lengths, vmax, bin_
     year_trans = mtransforms.offset_copy(base_trans, fig=fig, x=-10, y=0, units="points")
     for species, rows in species_row_indices.items():
         y_center = (row_y_centers[min(rows)] + row_y_centers[max(rows)]) / 2
-        ax.text(0.0, y_center, r"$\it{" + species + "}$", transform=species_trans, ha="center", va="center", rotation=90, fontsize=fontsize, clip_on=False)
+        ax.text(0.0, y_center, species_label(species), transform=species_trans, ha="center", va="center", rotation=90, fontsize=fontsize, clip_on=False)
     for row_idx, (species, yr) in enumerate(track_rows):
         ax.text(0.0, row_y_centers[row_idx], f"{yr}", transform=year_trans, ha="center", va="center", rotation=90, fontsize=fontsize, clip_on=False)
 
@@ -528,23 +525,50 @@ def plot_ibd_track(fig, ax, profiles, years, chr_dict, chrom_lengths, vmax, bin_
 
 ############################ plot formatting ############################
 def italicize_species_legend(leg):
+    """Species in a legend written as an italic "G. fortis" (other groups unchanged)."""
     for text in leg.get_texts():
-        if text.get_text() in SPECIES_NAMES:
-            text.set_fontstyle("italic")
+        text.set_text(species_label(text.get_text()))
 
 
 def style_legend(ax, **kwargs):
-    """White legend with a thin frame and italicized species names."""
+    """White legend with a thin frame and species names in italics, with the genus."""
     leg = ax.legend(facecolor="white", framealpha=1.0, **kwargs)
     leg.get_frame().set_linewidth(0.3)
     italicize_species_legend(leg)
     return leg
 
 
-def save_figure(path, fig=None):
-    """Save (and close) a figure with the settings shared by all figures (path relative to figures_ibis/, e.g. main/x.png)."""
+def add_panel_letters(fig, axes, fontsize=24, pad=12, shift=None, align=None, anchor="ticks"):
+    """Bold A, B, C ... above the top left corner of each panel in axes, pad points above the top of the plot area. Each letter starts at the
+    left edge of (anchor="ticks") the panel's y axis tick labels, or the axis itself if it has none, or of (anchor="label") everything the
+    panel draws, so above its y axis label.
+    shift: {panel number (from 0): inches} moves those letters further left; align: lists of panel numbers whose letters are then lined up
+    under each other, at the leftmost of them. Call once the layout is final."""
+    fig.canvas.draw()  # so the panels' final positions are known
+    renderer = fig.canvas.get_renderer()
+    to_figure = fig.transFigure.inverted()
+    lefts = []
+    for k, ax in enumerate(axes):
+        tick_labels = [t for t in ax.get_yticklabels() if t.get_visible() and t.get_text() and ax.yaxis.get_tick_params()["labelleft"]]
+        edges = [t.get_window_extent(renderer).transformed(to_figure).x0 for t in tick_labels]
+        left = ax.get_tightbbox(renderer).transformed(to_figure).x0 if anchor == "label" else min(edges + [ax.get_position().x0])
+        lefts.append(left - (shift or {}).get(k, 0) / fig.get_figwidth())
+    for group in align or []:
+        for k in group:
+            lefts[k] = min(lefts[j] for j in group)
+    for letter, ax, left in zip(string.ascii_uppercase, axes, lefts):
+        top = ax.get_position().y1 + pad / 72 / fig.get_figheight()
+        fig.text(left, top, letter, ha="left", va="bottom", fontsize=fontsize, fontweight="bold", color="black")
+
+
+def save_figure(path, fig=None, pdf=False):
+    """Save (and close) a figure with the settings shared by all figures (path relative to figures_ibis/, e.g. main/x.png). pdf: also save it
+    as a vector pdf of the same name (for the journal), with its text kept as text."""
     fig = fig or plt.gcf()
     fig.savefig(f"{FIGURES}/{path}", dpi=450, bbox_inches="tight", pad_inches=0.05)
+    if pdf:
+        with plt.rc_context({"pdf.fonttype": 42}):
+            fig.savefig(f"{FIGURES}/{os.path.splitext(path)[0]}.pdf", dpi=450, bbox_inches="tight", pad_inches=0.05)
     plt.close(fig)
 
 
@@ -600,3 +624,66 @@ def lmm_lrt(y, X, eig, test_col=1):
     b_full, ll_full = _ml_fit(eigvals, Uty, UtX)
     _, ll_null = _ml_fit(eigvals, Uty, np.delete(UtX, test_col, axis=1))
     return b_full[test_col], stats.chi2.sf(max(2 * (ll_full - ll_null), 0), df=1)
+
+
+############################ kinship to the founder's descendants ############################
+def load_max_kin(master):
+    """For every fortis / scandens, the kinship to its closest older relative among the founder's descendants (max_kin), which lineage that
+    relative is in (max_line), and the kinship cutoffs between degrees of relatedness (1st to 4th; 5th degree and beyond are shown together)."""
+    info = master.set_index("meaningful.unique")
+    coef = load_all_coef()
+    for i in [1, 2]:
+        coef[f"year{i}"] = coef[f"Individual{i}"].map(info["year"])
+        coef[f"spp{i}"] = coef[f"Individual{i}"].map(info["Species"])
+
+    # include both orientations of each pair, then keep fortis/scandens paired with older descendants of the founder
+    swapped = coef.rename(columns={"Individual1": "Individual2", "Individual2": "Individual1", "year1": "year2", "year2": "year1", "spp1": "spp2", "spp2": "spp1"})
+    pairs = pd.concat([coef, swapped], ignore_index=True)
+    pairs = pairs[pairs["spp1"].isin(FOCAL_SPECIES) & pairs["spp2"].isin(DESCENDANT_LINEAGES) & (pairs["year1"] > pairs["year2"])]
+
+    # closest relative in each lineage for each bird, and which lineage is closest
+    pivot = pairs.pivot_table(index=["Individual1", "spp1", "year1"], columns="spp2", values="Kinship_Coefficient", aggfunc="max").reset_index()
+    pivot[DESCENDANT_LINEAGES] = pivot[DESCENDANT_LINEAGES].fillna(0)
+    pivot["max_line"] = pivot[DESCENDANT_LINEAGES].idxmax(axis=1).astype(CategoricalDtype(categories=DESCENDANT_LINEAGES, ordered=True))
+    pivot["max_kin"] = pivot[DESCENDANT_LINEAGES].max(axis=1)
+    pivot = pivot.sort_values(by="max_line")
+    pivot["year1"] = pivot["year1"].astype(int)
+    return pivot, degree_cutoffs(coef, range(1, 5))
+
+
+def plot_max_kin(axes, pivot, cutoffs, y_limits=(-0.002, 0.25), point_size=50):
+    """One panel per focal species (axes sharing their y axis): each bird's kinship to its closest relative among the founder's descendants
+    against its first year, colored by that relative's lineage, with the degrees of relatedness marked on the right of the last panel."""
+    for ax, spp in zip(axes, FOCAL_SPECIES):
+        sns.scatterplot(x="year1", y="max_kin", hue="max_line", data=pivot[pivot["spp1"] == spp], palette=COLOR_MAP, s=point_size, alpha=0.6, ax=ax, zorder=2)
+
+        # circle the first degree Big Birds
+        target_point = pivot[(pivot["spp1"] == spp) & (pivot["max_line"] == "Big Birds") & (pivot["max_kin"] > cutoffs[0])]
+        if not target_point.empty:
+            sns.scatterplot(data=target_point, x="year1", y="max_kin", facecolor="none", edgecolor="black", s=point_size, linewidth=1, zorder=3, ax=ax)
+
+        ax.set_xlabel(None)
+        ax.set_ylabel("Kinship coefficient to closest relative")
+        ax.set_title(species_label(spp))
+        style_legend(ax, title=None, loc="upper left")
+        ax.grid(axis="y")
+        ax.set_xticks(np.arange(1975, 2025, 5))
+        ax.set_ylim(*y_limits)
+        ax.set_xlim(1978, 2024)
+        sns.despine(top=True, right=True, ax=ax)
+
+        # show the cutoffs between degrees of relatedness
+        for c in cutoffs:
+            ax.axhline(y=c, color="lightgray", linewidth=1, zorder=1)
+    axes[0].get_legend().remove()
+
+    # degree-of-relatedness labels on the right side of the last panel
+    boundaries = [y_limits[1]] + cutoffs + [y_limits[0]]
+    midpoints = [(boundaries[i] + boundaries[i + 1]) / 2 for i in range(len(boundaries) - 1)]
+    ax2 = axes[-1].twinx()
+    ax2.set_ylim(*y_limits)
+    ax2.set_yticks(midpoints)
+    ax2.set_yticklabels(["1st", "2nd", "3rd", "4th", "5th+"])
+    ax2.tick_params(axis="y", length=0)
+    ax2.grid(False)
+    sns.despine(top=True, right=True, ax=ax2)

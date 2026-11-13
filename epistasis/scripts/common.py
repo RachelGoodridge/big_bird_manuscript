@@ -60,7 +60,8 @@ def cell_summary(birds, locus1, locus2, trait, by_ibd):
 
 
 def group_title(group):
-    return rf"$\it{{{group}}}$" if group in SPECIES_NAMES else group
+    """A group's name as written in figures: species as an italic "G. fortis", any other group unchanged."""
+    return rf"$\it{{G.\,{group}}}$" if group in SPECIES_NAMES else group
 
 
 def plot_mean_heatmap(means, ns, locus1, locus2, trait, title, path):

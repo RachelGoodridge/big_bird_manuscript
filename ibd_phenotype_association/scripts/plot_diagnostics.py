@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.stats import chi2
-from common import FOCAL_SPECIES, RESULTS, TRAITS, load_birds, save_figure, set_plot_theme
+from common import FOCAL_SPECIES, RESULTS, TRAITS, load_birds, save_figure, set_plot_theme, species_label
 
 set_plot_theme()
 df = pd.read_csv(RESULTS, dtype={"chrom": str})
@@ -27,7 +27,7 @@ for ax, (spp, trait) in zip(axes, panels):
     ax.plot([0, expected.max()], [0, expected.max()], color="red", linewidth=1, linestyle="--")
     ax.set_xlabel("Expected $-log_{10}$p")
     ax.set_ylabel("Observed $-log_{10}$p")
-    ax.set_title(r"$\it{" + spp + "}$" + f": {trait}, λ = {inflation:.3f}")
+    ax.set_title(species_label(spp) + f": {trait}, λ = {inflation:.3f}", fontsize=13)  # small enough that neighboring titles stay apart
     sns.despine(top=True, right=True, ax=ax)
 plt.tight_layout()
 save_figure("qq_plots.png", fig)
@@ -42,7 +42,7 @@ for ax, (spp, trait) in zip(axes, panels):
     ax.plot(x, slope * x + intercept, color="red", linewidth=1)
     ax.set_xlabel("Birds in the test (IBD) group")
     ax.set_ylabel("$-log_{10}$p-value")
-    ax.set_title(r"$\it{" + spp + "}$" + f": {trait}")
+    ax.set_title(species_label(spp) + f": {trait}")
     sns.despine(top=True, right=True, ax=ax)
 plt.tight_layout()
 save_figure("n_test_vs_pvalue.png", fig)
@@ -59,7 +59,7 @@ for row, spp in enumerate(FOCAL_SPECIES):
         ax.scatter(x, birds[pc], s=3, alpha=0.3, color="#1a5276")
         ax.set_xlabel(x_label)
         ax.set_ylabel(pc)
-        ax.set_title(r"$\it{" + spp + "}$" + f": r = {np.corrcoef(x, birds[pc])[0, 1]:.3f}")
+        ax.set_title(species_label(spp) + f": r = {np.corrcoef(x, birds[pc])[0, 1]:.3f}")
         sns.despine(top=True, right=True, ax=ax)
 plt.tight_layout()
 save_figure("pc_sign_check.png", fig)

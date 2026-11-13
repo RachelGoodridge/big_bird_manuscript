@@ -47,7 +47,11 @@ pca <- pca %>% filter(!is.na(Species))
 # standard project-wide palette (color_map_hex)
 ancestry_colors <- c(fortis = "#1C86EE", scandens = "#43CD80", conirostris = "#8B4513", founder = "#FF3030",
                      "A line" = "#FF8C00", "B line" = "#FFAEB9", "Big Birds" = "#800080")
+# species are written with the genus, in italics ("G. fortis"), in legends; the lineages (A line, founder ...) stay upright
+species_names <- c("fortis", "scandens", "conirostris", "magnirostris", "fuliginosa")
+species_labels <- function(x) parse(text = ifelse(x %in% species_names, paste0("italic('G. ", x, "')"), paste0("'", x, "'")))
 pca <- pca[order(pca$Species == "founder"),] # draw founder last so its on top
-p <- ggplot(pca, aes(PC1, PC2, col = Species)) + geom_point(size = 1.5) + theme_light() + scale_color_manual(values = ancestry_colors) +
+p <- ggplot(pca, aes(PC1, PC2, col = Species)) + geom_point(size = 1.5) + theme_light() + scale_color_manual(values = ancestry_colors, labels = species_labels) +
+  theme(legend.text = element_text(hjust = 0)) +
   xlab(paste0("PC1 (", signif(pve$pve[1], 3), "%)")) + ylab(paste0("PC2 (", signif(pve$pve[2], 3), "%)"))
 ggsave("whole_data_pca.png", plot = p, height = 5, width = 7, units = "in", dpi = 300)

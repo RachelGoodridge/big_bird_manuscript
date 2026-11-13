@@ -13,4 +13,4 @@ plot_beak_vs_ibd(axes[1], birds, "PC(Beak Pointedness)", show_legend=True)
 style_legend(axes[1], loc="upper right")
 
 plt.tight_layout(rect=[0, 0, 1, 0.88])
-save_figure("main/beak_shape_vs_frac_ibd.png")
+save_figure("supplement/beak_shape_vs_frac_ibd.png")

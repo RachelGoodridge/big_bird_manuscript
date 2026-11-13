@@ -4,15 +4,13 @@ cd "$(dirname "$0")"
 mkdir -p main supplement
 
 # main figures
-python scripts/fig_ibd_over_time.py
-python scripts/fig_beak_shape.py
-python scripts/fig_chr6_traits.py
-python scripts/fig_manhattan_track.py
-python scripts/fig_max_kin.py
-python scripts/fig_2_combined.py  # figure2a-c + PC(Beak Pointedness) over time + IBD tracks in one figure
+python scripts/fig_2_combined.py  # PC(Beak Pointedness) and IBD with the founder over time + IBD tracks along the genome
+python scripts/fig_3_combined.py  # kinship to the founder's descendants + schematic of the populations (illustrations/demes_diagram.py)
 python scripts/fig_4_combined.py  # beak pointedness vs IBD (genome-wide, chr6 LMM) + scandens Manhattan (needs ibd_phenotype_association output)
 
 # supplementary figures
+python scripts/supp_beak_shape.py
+python scripts/supp_chr6_traits.py  # needs ibd_phenotype_association output
 python scripts/supp_relative_abundance.py
 python scripts/supp_anc_con.py
 python scripts/supp_ideogram.py

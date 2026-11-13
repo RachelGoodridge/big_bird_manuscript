@@ -19,7 +19,7 @@ sys.modules["figures_common"] = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(sys.modules["figures_common"])
 from figures_common import (COLOR_MAP, FOCAL_SPECIES, WINDOW_COVERAGE, add_beak_body_ratio, add_bill_pcs, add_body_pc, eigen_grm, lmm_lrt,
                             load_bim, load_chromosomes, load_founder_coef, load_loco_grm, load_master, load_trimmed_segments, make_windows,
-                            set_plot_theme, window_coverage)
+                            set_plot_theme, species_label, window_coverage)
 
 # traits tested, and the covariates of each (beak size / pointedness also control for body size, i.e. allometry)
 TRAITS = ["PC(Body Size)", "PC(Beak Size)", "PC(Beak Pointedness)", "Beak:Body Ratio"]
@@ -60,7 +60,7 @@ REGION_COVERAGE = 0.5  # region test: birds whose IBD covers at least this fract
 REGION_GROUPS = ["No IBD", f"IBD ≥ {REGION_COVERAGE:.0%}"]
 
 # region of chromosome 6 where beak pointedness is associated with IBD in scandens across the whole stretch (windows mostly p < 0.02,
-# falling off sharply on either side), tested as a whole in fig_chr6_traits.py and figure 4: chromosome name, start, end (bp)
+# falling off sharply on either side), tested as a whole in supp_chr6_traits.py and figure 4: chromosome name, start, end (bp)
 CHR6_REGION = ("6", 10_000_000, 30_500_000)
 
 
