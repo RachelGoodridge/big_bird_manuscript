@@ -1,5 +1,5 @@
-# alternative to figure 4 (fig_4_combined.py) with the chromosome 6 genotype heatmap (chr6_haplotypes/figures/peak_heatmap.png) as panel C:
-# A, B (narrower) and the heatmap in the top row, the Manhattan plot (D) below them
+# alternative to figure 4 (fig_4_combined.py) with the chromosome 6 genotype heatmap (chr6_haplotypes/figures/peak_heatmap.png) as panel D:
+# A, C (narrower) and the heatmap (D) in the top row, the Manhattan plot (B) below them
 import importlib.util
 import os
 import sys
@@ -28,14 +28,14 @@ TRAIT = "PC(Beak Pointedness)"
 CHROM, START, END = CHR6_REGION
 
 
-# layout, in inches. Panels A and C keep the proportions they have in figure 4 and in the standalone heatmap
+# layout, in inches. Panels A and D keep the proportions they have in figure 4 and in the standalone heatmap
 ROW_HEIGHT = 4.6             # top row
 A_WIDTH = ROW_HEIGHT * 1.21  # as in figure 4
-B_WIDTH = 2.5
+C_WIDTH = 2.5
 TREE_WIDTH, GROUPS_WIDTH, HEATMAP_WIDTH = 0.58, 0.12, ROW_HEIGHT * 1.04  # the heatmap's tree, group colors and genotypes, as in the standalone plot
 LEGEND_WIDTH = 1.95          # room right of the heatmap for its legends
-GAP_AB, GAP_BC = 1.3, 0.9  # between the panels of the top row
-D_ASPECT = 5.0               # the Manhattan plot's width / height (3.63 in figure 4)
+GAP_AC, GAP_CD = 1.3, 0.9  # between the panels of the top row
+B_ASPECT = 5.0               # the Manhattan plot's width / height (3.63 in figure 4)
 LEFT, RIGHT, TOP, BOTTOM, ROW_GAP = 1.0, 0.1, 1.0, 0.8, 1.3  # margins, and the gap between the rows
 HEATMAP_FONTSIZE = 13
 HEATMAP_COLORS = ["#ececec", "#9E9E9E", "#505050"]  # 0, 1, 2 copies of the donor allele: grays, as the groups beside the heatmap are in color
@@ -45,24 +45,24 @@ HEATMAP_COLORS = ["#ececec", "#9E9E9E", "#505050"]  # 0, 1, 2 copies of the dono
 # (a) every bird carrying IBD with the founder: beak pointedness against the genome-wide fraction of SNPs in IBD
 ibd_birds = load_ibd_beak_birds(load_master())
 
-# (b) the scandens of the association test with at least half of the chromosome 6 region in IBD, or none, tested with the same LMM as the
+# (c) the scandens of the association test with at least half of the chromosome 6 region in IBD, or none, tested with the same LMM as the
 # windows (chromosome 6 LOCO GRM, covariates sex, IBD outside chromosome 6, and PC(Body Size))
 chrom_code = {name: code for code, name in load_chromosomes().items()}[CHROM]
 birds, eig = region_test_birds(SPP, chrom_code, START, END)
 beta, p = region_lmm(birds, eig, TRAIT)
 print(f"chr{CHROM}:{START}-{END} {SPP} {TRAIT}: {birds['ibd_group'].value_counts().to_dict()}, beta = {beta:.6f}, p = {p:.6f}")
 
-# (d) windows of the association test
+# (b) windows of the association test
 genome = genome_layout()
 results = load_results(genome)
 manhattan = results[(results["species"] == SPP) & (results["trait"] == TRAIT)]
 
 
 ########################### CREATE PLOT ###########################
-top_width = A_WIDTH + GAP_AB + B_WIDTH + GAP_BC + TREE_WIDTH + GROUPS_WIDTH + HEATMAP_WIDTH + LEGEND_WIDTH
-d_width = top_width - 0.1  # ends under the heatmap's legends
-d_height = d_width / D_ASPECT
-width, height = LEFT + top_width + RIGHT, TOP + ROW_HEIGHT + ROW_GAP + d_height + BOTTOM
+top_width = A_WIDTH + GAP_AC + C_WIDTH + GAP_CD + TREE_WIDTH + GROUPS_WIDTH + HEATMAP_WIDTH + LEGEND_WIDTH
+b_width = top_width - 0.1  # ends under the heatmap's legends
+b_height = b_width / B_ASPECT
+width, height = LEFT + top_width + RIGHT, TOP + ROW_HEIGHT + ROW_GAP + b_height + BOTTOM
 fig = plt.figure(figsize=(width, height))
 
 
@@ -71,41 +71,41 @@ def add_axes(left, bottom, w, h):
     return fig.add_axes([left / width, bottom / height, w / width, h / height])
 
 
-row_bottom = BOTTOM + d_height + ROW_GAP
+row_bottom = BOTTOM + b_height + ROW_GAP
 x = LEFT
 ax_a = add_axes(x, row_bottom, A_WIDTH, ROW_HEIGHT)
-x += A_WIDTH + GAP_AB
-ax_b = add_axes(x, row_bottom, B_WIDTH, ROW_HEIGHT)
-x += B_WIDTH + GAP_BC
+x += A_WIDTH + GAP_AC
+ax_c = add_axes(x, row_bottom, C_WIDTH, ROW_HEIGHT)
+x += C_WIDTH + GAP_CD
 ax_tree = add_axes(x, row_bottom, TREE_WIDTH, ROW_HEIGHT)
 ax_groups = add_axes(x + TREE_WIDTH + 0.04, row_bottom, GROUPS_WIDTH, ROW_HEIGHT)
-ax_c = add_axes(x + TREE_WIDTH + GROUPS_WIDTH + 0.08, row_bottom, HEATMAP_WIDTH, ROW_HEIGHT)
-ax_d = add_axes(LEFT, BOTTOM, d_width, d_height)
+ax_d = add_axes(x + TREE_WIDTH + GROUPS_WIDTH + 0.08, row_bottom, HEATMAP_WIDTH, ROW_HEIGHT)
+ax_b = add_axes(LEFT, BOTTOM, b_width, b_height)
 
 plot_beak_vs_ibd(ax_a, ibd_birds, TRAIT, show_legend=True, stats_y=(1.075, 1.02))
 style_legend(ax_a, loc="upper right")
 
-plot_region_box(ax_b, birds, TRAIT, beta, p, SPP)
-ax_b.set_title(f"{START / 1e6:g}-{END / 1e6:g} Mb on chr. {CHROM}", pad=30)
-ax_b.texts[-1].set_text(ax_b.texts[-1].get_text().replace("Linear mixed model", "LMM"))  # the statistics under the title
+plot_region_box(ax_c, birds, TRAIT, beta, p, SPP)
+ax_c.set_title(f"{START / 1e6:g}-{END / 1e6:g} Mb on chr. {CHROM}", pad=30)
+ax_c.texts[-1].set_text(ax_c.texts[-1].get_text().replace("Linear mixed model", "LMM"))  # the statistics under the title
 
 # heatmap: the peak's position as a subtitle (as in B), and a compact legend (no islands, the scandens labels on two lines)
 group_labels = {g: GROUPS.loc[g, "label"].replace(" (Daphne)", "").replace(" (Española)", "").replace(" (", "\n(") for g in GROUPS.index}
-n_snps, n_shown, n_scandens = plot_peak_heatmap(ax_tree, ax_groups, ax_c, fontsize=HEATMAP_FONTSIZE, legend_y=(1, 0.62), peak_labels=False,
+n_snps, n_shown, n_scandens = plot_peak_heatmap(ax_tree, ax_groups, ax_d, fontsize=HEATMAP_FONTSIZE, legend_y=(1, 0.62), peak_labels=False,
                                                 group_labels=group_labels, colors=HEATMAP_COLORS)
 peaks = pd.read_csv(PEAK_REGIONS, sep="\t")
-ax_c.set_title(f"{n_snps} {HEATMAP_SNPS} SNPs in the FST peak{'s' if len(peaks) > 1 else ''}", pad=30)
-ax_c.text(0.5, 1.02, ", ".join(f"{p['start'] / 1e6:.2f}-{p['end'] / 1e6:.2f}" for _, p in peaks.iterrows()) + f" Mb on chr. {CHROM}",
-          transform=ax_c.transAxes, ha="center", va="bottom", fontsize="small", color="#333333")
+ax_d.set_title(f"{n_snps} {HEATMAP_SNPS} SNPs in the FST peak{'s' if len(peaks) > 1 else ''}", pad=30)
+ax_d.text(0.5, 1.02, ", ".join(f"{p['start'] / 1e6:.2f}-{p['end'] / 1e6:.2f}" for _, p in peaks.iterrows()) + f" Mb on chr. {CHROM}",
+          transform=ax_d.transAxes, ha="center", va="bottom", fontsize="small", color="#333333")
 print(f"heatmap: {n_shown} of the {n_scandens} scandens without IBD shown")
 
-plot_manhattan(ax_d, manhattan, genome, SPP, "neg_log10_p", "$-log_{10}$p-value", show_threshold=True, point_size=8, tick_fontsize=13, combine_from="17")
-ax_d.set_title(f"Association of {IBD_F} with {TRAIT} in " + species_label(SPP), loc="left", pad=16)
+plot_manhattan(ax_b, manhattan, genome, SPP, "neg_log10_p", "$-log_{10}$p-value", show_threshold=True, point_size=8, tick_fontsize=13, combine_from="17")
+ax_b.set_title(f"Association of {IBD_F} with {TRAIT} in " + species_label(SPP), loc="left", pad=16)
 
-# gray band behind the chromosome 6 region in (d)
+# gray band behind the chromosome 6 region in (b)
 region_start, region_end = genome.loc[CHROM, "start"] + START, genome.loc[CHROM, "start"] + END
-ax_d.axvspan(region_start, region_end, color="lightgray", alpha=0.5, linewidth=0, zorder=0)
+ax_b.axvspan(region_start, region_end, color="lightgray", alpha=0.5, linewidth=0, zorder=0)
 
-# each letter over its panel's y axis label (C over the heatmap's tree), A and D under each other
-add_panel_letters(fig, [ax_a, ax_b, ax_tree, ax_d], align=[[0, 3]], anchor="label")
+# each letter over its panel's y axis label (D over the heatmap's tree), A and B (the bottom row) under each other
+add_panel_letters(fig, [ax_a, ax_b, ax_c, ax_tree], align=[[0, 1]], anchor="label")
 save_figure("main/figure4v2.png", fig, pdf=True)

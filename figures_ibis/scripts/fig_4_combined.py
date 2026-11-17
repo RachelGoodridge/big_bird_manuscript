@@ -20,7 +20,7 @@ SPP = "scandens"
 TRAIT = "PC(Beak Pointedness)"
 CHROM, START, END = CHR6_REGION
 
-# where the arrow from the region in (c) ends, in (b)'s axes fractions: x from 0 (left edge of b's plot area) to 1 (right edge), y from 0 (bottom
+# where the arrow from the region in (b) ends, in (c)'s axes fractions: x from 0 (left edge of c's plot area) to 1 (right edge), y from 0 (bottom
 # of the plot area, above the tick labels) to 1 (top); negative y is below the plot area (the tick labels end around -0.13)
 ARROW_TIP = (0.3, -0.12)
 
@@ -29,14 +29,14 @@ ARROW_TIP = (0.3, -0.12)
 # (a) every bird carrying IBD with the founder: beak pointedness against the genome-wide fraction of SNPs in IBD
 ibd_birds = load_ibd_beak_birds(load_master())
 
-# (b) the scandens of the association test with at least half of the chromosome 6 region in IBD, or none, tested with the same LMM as the
+# (c) the scandens of the association test with at least half of the chromosome 6 region in IBD, or none, tested with the same LMM as the
 # windows (chromosome 6 LOCO GRM, covariates sex, IBD outside chromosome 6, and PC(Body Size))
 chrom_code = {name: code for code, name in load_chromosomes().items()}[CHROM]
 birds, eig = region_test_birds(SPP, chrom_code, START, END)
 beta, p = region_lmm(birds, eig, TRAIT)
 print(f"chr{CHROM}:{START}-{END} {SPP} {TRAIT}: {birds['ibd_group'].value_counts().to_dict()}, beta = {beta:.6f}, p = {p:.6f}")
 
-# (c) windows of the association test
+# (b) windows of the association test
 genome = genome_layout()
 results = load_results(genome)
 manhattan = results[(results["species"] == SPP) & (results["trait"] == TRAIT)]
@@ -45,25 +45,25 @@ manhattan = results[(results["species"] == SPP) & (results["trait"] == TRAIT)]
 ########################### CREATE PLOT ###########################
 fig = plt.figure(figsize=(16, 12))
 gs = GridSpec(2, 2, figure=fig, height_ratios=[1, 0.75], hspace=0.32, wspace=0.25)
-ax_a, ax_b = fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1])
-ax_c = fig.add_subplot(gs[1, :])
+ax_a, ax_c = fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1])  # top row
+ax_b = fig.add_subplot(gs[1, :])  # bottom row
 
 plot_beak_vs_ibd(ax_a, ibd_birds, TRAIT, show_legend=True, stats_y=(1.075, 1.02))
 style_legend(ax_a, loc="upper right")
 
-plot_region_box(ax_b, birds, TRAIT, beta, p, SPP)
-ax_b.set_title(f"{IBD_F} on chr. {CHROM} ({START / 1e6:g}-{END / 1e6:g} Mb) in " + species_label(SPP), pad=30)
+plot_region_box(ax_c, birds, TRAIT, beta, p, SPP)
+ax_c.set_title(f"{IBD_F} on chr. {CHROM} ({START / 1e6:g}-{END / 1e6:g} Mb) in " + species_label(SPP), pad=30)
 
-plot_manhattan(ax_c, manhattan, genome, SPP, "neg_log10_p", "$-log_{10}$p-value", show_threshold=True, point_size=8, tick_fontsize=11, combine_from="17")
-ax_c.set_title(f"Association of {IBD_F} with {TRAIT} in " + species_label(SPP), loc="left", pad=16)  # left so the arrow from chr. 6 clears it
+plot_manhattan(ax_b, manhattan, genome, SPP, "neg_log10_p", "$-log_{10}$p-value", show_threshold=True, point_size=8, tick_fontsize=11, combine_from="17")
+ax_b.set_title(f"Association of {IBD_F} with {TRAIT} in " + species_label(SPP), loc="left", pad=16)  # left so the arrow from chr. 6 clears it
 
-# gray band behind the chromosome 6 region in (c), with an arrow from it up to (b)
+# gray band behind the chromosome 6 region in (b), with an arrow from it up to (c)
 region_start, region_end = genome.loc[CHROM, "start"] + START, genome.loc[CHROM, "start"] + END
-ax_c.axvspan(region_start, region_end, color="lightgray", alpha=0.5, linewidth=0, zorder=0)
-band_top = mtransforms.blended_transform_factory(ax_c.transData, ax_c.transAxes)
-fig.add_artist(ConnectionPatch(xyA=((region_start + region_end) / 2, 1.0), coordsA=band_top, xyB=ARROW_TIP, coordsB=ax_b.transAxes,
+ax_b.axvspan(region_start, region_end, color="lightgray", alpha=0.5, linewidth=0, zorder=0)
+band_top = mtransforms.blended_transform_factory(ax_b.transData, ax_b.transAxes)
+fig.add_artist(ConnectionPatch(xyA=((region_start + region_end) / 2, 1.0), coordsA=band_top, xyB=ARROW_TIP, coordsB=ax_c.transAxes,
                                arrowstyle="-|>", color="darkgray", linewidth=1.5, mutation_scale=18))
 
-# each letter over its panel's y axis label, A and C under each other
-add_panel_letters(fig, [ax_a, ax_b, ax_c], align=[[0, 2]], anchor="label")
+# each letter over its panel's y axis label, A and B (the bottom row) under each other
+add_panel_letters(fig, [ax_a, ax_b, ax_c], align=[[0, 1]], anchor="label")
 save_figure("main/figure4.png", fig, pdf=True)

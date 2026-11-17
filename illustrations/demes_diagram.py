@@ -10,7 +10,7 @@ from illustration_common import COLOR_MAP, save_svg, set_theme, tint
 # ---------------- settings you may want to change ----------------
 START, END = 1981, 2022
 FOUNDER_YEARS = (1981, 1994)  # years the founder was on Daphne
-A_LINE_START = 1987           # founder x fortis
+A_LINE_START = 1987           # founder x a fortis-scandens hybrid (drawn as fortis, to keep the diagram simple)
 B_LINE_START = 1991           # founder x fortis
 BIG_BIRDS_START = 2006        # the B line from here on
 OUTCROSS = 2011               # Big Birds x scandens

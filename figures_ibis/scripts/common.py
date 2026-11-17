@@ -241,11 +241,20 @@ def load_allometry_birds():
     return add_bill_pcs(add_body_pc(birds))
 
 
+def plot_trait_scatter(ax, birds, x, y):
+    """One trait (y) vs. another (x) for every bird, colored by species (outline width = fraction of SNPs in IBD). Returns the legend handles."""
+    birds = birds.sort_values(by="fraction_snps_ibd")
+    ax.scatter(birds[x], birds[y], c=birds["Species"].map(COLOR_MAP), alpha=0.5, edgecolors="black", linewidths=birds["fraction_snps_ibd"])
+    ax.set_xlabel(x)
+    ax.set_ylabel(y)
+    sns.despine(top=True, right=True, ax=ax)
+    return [Line2D([], [], color=color, marker="o", linestyle="None", markersize=6, label=s) for s, color in COLOR_MAP.items() if s in set(birds["Species"])]
+
+
 def plot_allometry(birds, fit_birds, fit_label, path):
     """Beak size vs. body size (outline width = fraction of SNPs in IBD) with a regression fit to fit_birds."""
-    birds = birds.sort_values(by="fraction_snps_ibd")
     fig, ax = plt.subplots(figsize=(8, 6))
-    ax.scatter(birds["PC(Body Size)"], birds["PC(Beak Size)"], c=birds["Species"].map(COLOR_MAP), alpha=0.5, edgecolors="black", linewidths=birds["fraction_snps_ibd"])
+    handles = plot_trait_scatter(ax, birds, "PC(Body Size)", "PC(Beak Size)")
 
     fit = stats.linregress(fit_birds["PC(Body Size)"], fit_birds["PC(Beak Size)"])
     x = np.sort(fit_birds["PC(Body Size)"])
@@ -253,11 +262,7 @@ def plot_allometry(birds, fit_birds, fit_label, path):
     ax.text(0.05, 0.99, fit_label, transform=ax.transAxes, ha="left", va="top", fontsize=11.5)
     ax.text(0.05, 0.94, f"$R^2$ = {fit.rvalue ** 2:.3f}", transform=ax.transAxes, ha="left", va="top", fontsize=11.5)
 
-    handles = [Line2D([], [], color=color, marker="o", linestyle="None", markersize=6, label=s) for s, color in COLOR_MAP.items() if s in set(birds["Species"])]
     style_legend(ax, handles=handles, bbox_to_anchor=(1, 1), loc="upper left")
-    ax.set_xlabel("PC(Body Size)")
-    ax.set_ylabel("PC(Beak Size)")
-    sns.despine(top=True, right=True, ax=ax)
     plt.tight_layout()
     save_figure(path, fig)
 
