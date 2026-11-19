@@ -8,6 +8,12 @@ chr6_haplotypes/scripts/__pycache__/
 chr6_haplotypes/work/
 drought_survivorship/scripts/__pycache__/
 epistasis/scripts/__pycache__/
+espanola_controls/dataset/espanola_downsampled.*
+espanola_controls/dataset/snps.tsv
+espanola_controls/min_length_merge1cM/*.pkl
+espanola_controls/output/
+espanola_controls/plink/
+espanola_controls/scripts/__pycache__/
 figures_ibis/scripts/__pycache__/
 ibd_phenotype_association/grm/
 ibd_phenotype_association/grm_build.log

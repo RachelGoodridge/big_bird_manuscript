@@ -40,7 +40,7 @@ seg["Generation"] = seg["ind"].map(master.set_index("meaningful.unique")["Genera
 seg["Species"] = seg["ind"].map(master.set_index("meaningful.unique")["Species"])
 sns.boxplot(x="Generation", y="genetic_seg_length", hue="Species", palette=COLOR_MAP, data=seg[~seg["Generation"].isna()])
 plt.xlabel("Generations from the Founder")
-plt.ylabel(ibd_label("Distribution of IBD Segment Lengths (cM)"))
+plt.ylabel(ibd_label("IBD Segment Lengths (cM)"))
 plt.title(ibd_label("IBD Segments Detected with IBIS"))
 sns.despine(top=True, right=True, left=True, bottom=True)
 plt.legend(title=None, loc="upper right")

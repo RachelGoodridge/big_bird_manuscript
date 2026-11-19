@@ -74,12 +74,10 @@ def draw_timeline(ax, label_size=15, size=SIZE):
 
     # black lines across the lineages' ends: the A line's (absorbed into fortis), the B line's (reproductive isolation: the Big Birds from here
     # on) and the Big Birds' (last observed)
-    end_bar(a, A_LINE[1])
-    ax.text(a, A_LINE[1] + 6 * pt, "absorbed into\n" + species_label("fortis"), ha="center", va="top", multialignment="center", **note)
+    ax.text(a, A_LINE[1] + 4 * pt, "absorbed into\n" + species_label("fortis"), ha="center", va="top", multialignment="center", **note)
     end_bar(b, BIG_BIRDS[0])
     ax.text(b - half - 0.08 - GAP, BIG_BIRDS[0], "reproductive\nisolation", ha="right", va="center", multialignment="right", **note)  # left of the line
-    end_bar(b, BIG_BIRDS[1])
-    ax.text(b - GAP, BIG_BIRDS[1] + 6 * pt, "last\nobserved", ha="right", va="top", multialignment="right", **note)  # under the line, left of the dashes
+    ax.text(b - GAP, BIG_BIRDS[1] + 4 * pt, "last\nobserved", ha="right", va="top", multialignment="right", **note)  # under the line, left of the dashes
 
     # unknown fate: a dashed arrow from the Big Birds' end to a question mark at the survey in which none were seen. The arrow starts as far
     # below the black line as it ends above the question mark (measured from the glyph's outline, which is centered on the survey year)

@@ -14,6 +14,13 @@ SPECIES_CORRECTIONS = {
     "01Dap21269": "magnirostris",  # recorded as fortis, but magnirostris ancestry and beak size
 }
 
+# birds measured as nestlings, whose measurements are not adult sizes: they stay in every analysis, but their measurements are set to missing
+MEASUREMENTS = ["bill.length", "bill.depth", "bill.width", "weight", "wing", "tarsus"]
+NESTLING_MEASUREMENTS = {
+    "04Dap19450",  # Big Bird
+    "04Dap19451",  # Big Bird
+}
+
 # the founder of the Big Bird lineage
 FOUNDER = "04Dap5110"
 DESCENDANT_LINEAGES = ["A line", "B line", "Big Birds"]
@@ -82,6 +89,9 @@ def load_master(island="Daphne"):
 
     # correct species labels that are contradicted by ancestry and morphology
     master["Species"] = master["meaningful.unique"].map(SPECIES_CORRECTIONS).fillna(master["Species"])
+
+    # remove measurements taken in the nest
+    master.loc[master["meaningful.unique"].isin(NESTLING_MEASUREMENTS), MEASUREMENTS] = np.nan
     return master
 
 

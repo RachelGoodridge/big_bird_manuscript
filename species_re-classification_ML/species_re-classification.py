@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import importlib.util
 import os
 import sys
