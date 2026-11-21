@@ -4,17 +4,17 @@ import importlib.util
 import os
 import sys
 import matplotlib.pyplot as plt
+import matplotlib.transforms as mtransforms
 import pandas as pd
+from matplotlib.patches import ConnectionPatch
 from common import (ASSOCIATION, add_panel_letters, load_chromosomes, load_ibd_beak_birds, load_master, plot_beak_vs_ibd, save_figure, set_plot_theme,
-                    species_label, style_legend)
+                    style_legend)
 
 # the IBD-phenotype association helpers (loaded by path since it is also named common.py)
 _spec = importlib.util.spec_from_file_location("association_common", f"{ASSOCIATION}/scripts/common.py")
 sys.modules["association_common"] = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(sys.modules["association_common"])
 from association_common import CHR6_REGION, genome_layout, load_results, plot_manhattan, plot_region_box, region_lmm, region_test_birds
-
-from ibis_common import IBD_F
 
 # the chromosome 6 genotype heatmap (chr6_haplotypes), loaded by path for the same reason
 _spec = importlib.util.spec_from_file_location("haplotype_common", f"{os.path.dirname(ASSOCIATION)}/chr6_haplotypes/scripts/common.py")
@@ -39,6 +39,10 @@ B_ASPECT = 5.0               # the Manhattan plot's width / height (3.63 in figu
 LEFT, RIGHT, TOP, BOTTOM, ROW_GAP = 1.0, 0.1, 1.0, 0.8, 1.3  # margins, and the gap between the rows
 HEATMAP_FONTSIZE = 13
 HEATMAP_COLORS = ["#ececec", "#9E9E9E", "#505050"]  # 0, 1, 2 copies of the donor allele: grays, as the groups beside the heatmap are in color
+COMBINE_FROM = "13"          # B's chromosomes from this one on are too small for their own label: runs of consecutive ones share one
+TICK_NUDGE = {"19-24": -2, "26": -10, "28": 4}  # horizontal shifts (points) of B's last chromosome labels, which would otherwise overlap
+LETTER_PAD = 0              # the panel letters' bottoms this many points above the top of their plots (no titles to clear)
+ZOOM_LINE_GAP = 4            # the line from B to C ends this many points under C's tick labels
 
 
 ########################### LOAD DATA ###########################
@@ -82,30 +86,45 @@ ax_groups = add_axes(x + TREE_WIDTH + 0.04, row_bottom, GROUPS_WIDTH, ROW_HEIGHT
 ax_d = add_axes(x + TREE_WIDTH + GROUPS_WIDTH + 0.08, row_bottom, HEATMAP_WIDTH, ROW_HEIGHT)
 ax_b = add_axes(LEFT, BOTTOM, b_width, b_height)
 
-plot_beak_vs_ibd(ax_a, ibd_birds, TRAIT, show_legend=True, stats_y=(1.075, 1.02))
+# no panel titles (the region, the heatmap's SNPs and the association test are described in the caption); the statistics inside the plots:
+# A's at the bottom left, C's at the top right (above the IBD group's box)
+plot_beak_vs_ibd(ax_a, ibd_birds, TRAIT, show_legend=True, stats_y=(0.075, 0.03))
 style_legend(ax_a, loc="upper right")
 
 plot_region_box(ax_c, birds, TRAIT, beta, p, SPP)
-ax_c.set_title(f"{START / 1e6:g}-{END / 1e6:g} Mb on chr. {CHROM}", pad=30)
-ax_c.texts[-1].set_text(ax_c.texts[-1].get_text().replace("Linear mixed model", "LMM"))  # the statistics under the title
+lmm = ax_c.texts[-1]
+lmm.set_text(lmm.get_text().replace("Linear mixed model: ", "").replace(", p", "\np"))
+lmm.set(x=0.98, y=0.92, ha="right", va="top", multialignment="right")
 
-# heatmap: the peak's position as a subtitle (as in B), and a compact legend (no islands, the scandens labels on two lines)
+# heatmap, with a compact legend (no islands, the scandens labels on two lines)
 group_labels = {g: GROUPS.loc[g, "label"].replace(" (Daphne)", "").replace(" (Española)", "").replace(" (", "\n(") for g in GROUPS.index}
 n_snps, n_shown, n_scandens = plot_peak_heatmap(ax_tree, ax_groups, ax_d, fontsize=HEATMAP_FONTSIZE, legend_y=(1, 0.62), peak_labels=False,
                                                 group_labels=group_labels, colors=HEATMAP_COLORS)
 peaks = pd.read_csv(PEAK_REGIONS, sep="\t")
-ax_d.set_title(f"{n_snps} {HEATMAP_SNPS} SNPs in the FST peak{'s' if len(peaks) > 1 else ''}", pad=30)
-ax_d.text(0.5, 1.02, ", ".join(f"{p['start'] / 1e6:.2f}-{p['end'] / 1e6:.2f}" for _, p in peaks.iterrows()) + f" Mb on chr. {CHROM}",
-          transform=ax_d.transAxes, ha="center", va="bottom", fontsize="small", color="#333333")
-print(f"heatmap: {n_shown} of the {n_scandens} scandens without IBD shown")
+print(f"heatmap: {n_snps} {HEATMAP_SNPS} SNPs in", ", ".join(f"{p['start'] / 1e6:.2f}-{p['end'] / 1e6:.2f}" for _, p in peaks.iterrows()),
+      f"Mb on chr. {CHROM}; {n_shown} of the {n_scandens} scandens without IBD shown")
 
-plot_manhattan(ax_b, manhattan, genome, SPP, "neg_log10_p", "$-log_{10}$p-value", show_threshold=True, point_size=8, tick_fontsize=13, combine_from="17")
-ax_b.set_title(f"Association of {IBD_F} with {TRAIT} in " + species_label(SPP), loc="left", pad=16)
+# the tested windows side by side (the untested parts of the genome are left out)
+windows = plot_manhattan(ax_b, manhattan, genome, SPP, "neg_log10_p", "$-log_{10}$p-value", show_threshold=True, point_size=8, tick_fontsize=13,
+                         combine_from=COMBINE_FROM, by_window=True)
+# chromosomes 26 and 28 have too few tested windows for their labels to fit side by side, so they are nudged apart (in points), with 19-24
+# moved left to make room
+for label in ax_b.get_xticklabels():
+    if label.get_text() in TICK_NUDGE:
+        label.set_transform(label.get_transform() + mtransforms.ScaledTranslation(TICK_NUDGE[label.get_text()] / 72, 0, fig.dpi_scale_trans))
 
-# gray band behind the chromosome 6 region in (b)
-region_start, region_end = genome.loc[CHROM, "start"] + START, genome.loc[CHROM, "start"] + END
+# gray band behind the windows of the chromosome 6 region in (b), with lines from its top corners to the bottom left corner of C (just under its
+# tick labels, which would otherwise cross the line) and the bottom right corner of D's heatmap
+in_region = windows[(windows["chrom"] == CHROM) & (windows["window_start"] >= START) & (windows["window_end"] <= END)]
+region_start, region_end = in_region["x"].min() - 0.5, in_region["x"].max() + 0.5
 ax_b.axvspan(region_start, region_end, color="lightgray", alpha=0.5, linewidth=0, zorder=0)
+band_top = mtransforms.blended_transform_factory(ax_b.transData, ax_b.transAxes)
+fig.canvas.draw()  # so the tick labels' extents are known
+labels_bottom = min(label.get_window_extent().y0 for label in ax_c.get_xticklabels()) - ZOOM_LINE_GAP * fig.dpi / 72
+c_corner_y = ax_c.transAxes.inverted().transform((0, labels_bottom))[1]
+for x_band, ax_end, corner in [(region_start, ax_c, (0, c_corner_y)), (region_end, ax_d, (1, c_corner_y))]:  # D's at the same height as C's
+    fig.add_artist(ConnectionPatch(xyA=(x_band, 1.0), coordsA=band_top, xyB=corner, coordsB=ax_end.transAxes, color="darkgray", linewidth=1.2))
 
 # each letter over its panel's y axis label (D over the heatmap's tree), A and B (the bottom row) under each other
-add_panel_letters(fig, [ax_a, ax_b, ax_c, ax_tree], align=[[0, 1]], anchor="label")
+add_panel_letters(fig, [ax_a, ax_b, ax_c, ax_tree], align=[[0, 1]], anchor="label", pad=LETTER_PAD)
 save_figure("main/figure4v2.png", fig, pdf=True)

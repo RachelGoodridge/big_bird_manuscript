@@ -27,7 +27,11 @@ point_size = pd.Series(25, index=n_scaled.index)
 # (b-d) fraction of SNPs in IBD with the founder for every bird, and per year averages / carrier frequencies
 birds = founder_ibd_per_bird(master)
 summary = order_groups(yearly_summary(birds), FOCAL_SPECIES, by=["Year", "Species"])
+# panel b's points are drawn with the fortis and scandens shuffled together (neither species always on top), both under the founder's
+# lineages; the legend keeps GROUPS' order
 birds = order_groups(birds, GROUPS)
+focal = birds["Species"].isin(FOCAL_SPECIES)
+birds = pd.concat([birds[focal].sample(frac=1, random_state=1), birds[~focal]])
 
 # (e) IBD frequency along the genome in each year, on a color scale shared by both years and species
 chr_dict = load_chromosomes()

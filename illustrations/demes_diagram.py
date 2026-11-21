@@ -15,6 +15,8 @@ B_LINE_START = 1991           # founder x fortis
 BIG_BIRDS_START = 2006        # the B line from here on
 OUTCROSS = 2011               # Big Birds x scandens
 FADE_START = 2012             # the A line and the Big Birds fade from here to END
+FADE_SPREAD = 0.45            # how the fade runs (a bell-curve-like rise): smaller turns white sooner after FADE_START; it starts and ends
+                              # gradually, with no visible edge at FADE_START
 GENE_FLOW_START = 2000        # fortis <-> scandens gene flow, more and more frequent from here on
 
 # each tube: color, horizontal center, and half-width at the given years (straight lines in between)
@@ -43,6 +45,12 @@ def edges(name, year):
     return t["center"] - half, t["center"] + half
 
 
+def fade(year):
+    """How far a fading tube (and its arrows) has turned white in a year: 0 until FADE_START, 1 from END."""
+    t = np.clip((np.asarray(year) - FADE_START) / (END - FADE_START), 0, 1)
+    return (1 - np.exp(-(t / FADE_SPREAD) ** 2)) / (1 - np.exp(-(1 / FADE_SPREAD) ** 2))
+
+
 def draw_tube(ax, name, zorder):
     """A tube: lighter fill with its two sides outlined. Fading tubes are covered from FADE_START to END by white of rising opacity (on the
     white page this looks the same as the tube turning transparent, without a seam where the fade starts)."""
@@ -55,7 +63,7 @@ def draw_tube(ax, name, zorder):
         ax.plot(side, years, color=t["color"], linewidth=1.8, solid_capstyle="butt", zorder=zorder + 0.1)
     if name in FADING:
         cover = np.ones((256, 1, 4))
-        cover[:, 0, 3] = np.linspace(0, 1, 256)
+        cover[:, 0, 3] = fade(np.linspace(FADE_START, END + 0.2, 256))
         ax.imshow(cover, extent=[left.min() - 0.1, right.max() + 0.1, END + 0.2, FADE_START], aspect="auto", zorder=zorder + 0.2,
                   interpolation="bilinear")
 
@@ -74,14 +82,18 @@ def arrow(ax, x_from, x_to, year, color, width, zorder, dashed=False, halo=False
                          closed=True, facecolor=color, edgecolor="none", zorder=zorder))
 
 
-def gene_flow(ax, deme_a, deme_b, years, zorder):
-    """Thin arrows between two neighboring tubes (deme_a on the left), alternating in direction, each the color of the deme it comes from."""
+def gene_flow(ax, deme_a, deme_b, years, zorder, fading=False):
+    """Thin arrows between two neighboring tubes (deme_a on the left), alternating in direction, each the color of the deme it comes from.
+    fading: arrows after FADE_START turn white as the fading tubes do (at the same rate as their white cover)."""
     for k, year in enumerate(years):
         x_a, x_b = edges(deme_a, year)[1], edges(deme_b, year)[0]
+        whiteness = 0.25
+        if fading:
+            whiteness += (1 - whiteness) * fade(year)
         if k % 2:
-            arrow(ax, x_a, x_b, year, tint(TUBES[deme_a]["color"], 0.25), THIN, zorder)
+            arrow(ax, x_a, x_b, year, tint(TUBES[deme_a]["color"], whiteness), THIN, zorder)
         else:
-            arrow(ax, x_b, x_a, year, tint(TUBES[deme_b]["color"], 0.25), THIN, zorder)
+            arrow(ax, x_b, x_a, year, tint(TUBES[deme_b]["color"], whiteness), THIN, zorder)
 
 
 def avoid(years, events, margin=0.45):
@@ -95,8 +107,9 @@ def draw_demes(ax, label_size=15):
 
     for name in TUBES:
         draw_tube(ax, name, zorder=2)
-    # gene flow between fortis and the A line, and between fortis and the B line (halfway between the A line's arrows, crossing over the A line)
-    gene_flow(ax, "fortis", "A line", avoid(np.arange(A_LINE_START + 1, FADE_START, A_GENE_FLOW_GAP), events), zorder=3)
+    # gene flow between fortis and the A line (until END, fading with the A line), and between fortis and the B line (halfway between the A
+    # line's arrows, crossing over the A line)
+    gene_flow(ax, "fortis", "A line", avoid(np.arange(A_LINE_START + 1, END, A_GENE_FLOW_GAP), events), zorder=3, fading=True)
     b_years = np.arange(A_LINE_START + 1 + A_GENE_FLOW_GAP / 2, BIG_BIRDS_START, A_GENE_FLOW_GAP)
     gene_flow(ax, "fortis", "B line", [y for y in avoid(b_years, events) if y > B_LINE_START], zorder=3)
 

@@ -23,10 +23,12 @@ SURVEY = END
 AXIS_X = 0.66                 # the time axis
 BAR_X = {"A line": 1.27, "founder": 2.25, "B line": 3.23}   # middle of each lineage's bar
 BAR_WIDTH = 0.62              # of the A line, the B line and the Big Birds
-FOUNDER_WIDTH = 0.40          # of the founder (a single bird)
+FOUNDER_WIDTH = 0.20          # of the founder (a single bird)
 CORNER = 0.13                 # radius of the bars' rounded corners
 GAP = 0.07                    # between a shape and the text next to it
-BIG_BIRDS_TINT = 0.5          # the Big Birds' purple mixed with this much white, as in the pedigree, so that its black label is readable
+A_LINE_MATE = "hybrid"        # the founder's mate that started each lineage (a G. fortis x G. scandens hybrid, and a G. fortis)
+B_LINE_MATE = "fortis"
+BIG_BIRDS_TINT = 0.5         # the Big Birds' purple mixed with this much white, as in the pedigree, so that its black label is readable
 # ------------------------------------------------------------------
 
 def draw_timeline(ax, label_size=15, size=SIZE):
@@ -61,7 +63,7 @@ def draw_timeline(ax, label_size=15, size=SIZE):
 
     # lineages
     bar(founder, *FOUNDER, COLOR_MAP["founder"], width=FOUNDER_WIDTH)
-    ax.text(founder, FOUNDER[0] - 4 * pt, "founder", va="bottom", **name)
+    ax.text(founder, FOUNDER[0] - 4 * pt, "founder\non Daphne", va="bottom", **name)
     bar(a, *A_LINE, COLOR_MAP["A line"], "A line")
     bar(b, *B_LINE, COLOR_MAP["B line"], "B line")
     bar(b, *BIG_BIRDS, big_birds_color, "Big\nBirds")
@@ -71,6 +73,10 @@ def draw_timeline(ax, label_size=15, size=SIZE):
     arrow = dict(arrowstyle="-|>", color="black", lw=1.5, shrinkA=0, shrinkB=0, mutation_scale=12)
     ax.annotate("", xy=(a + half, A_LINE[0]), xytext=(founder - FOUNDER_WIDTH / 2, A_LINE[0]), arrowprops=arrow, zorder=4)
     ax.annotate("", xy=(b - half, B_LINE[0]), xytext=(founder + FOUNDER_WIDTH / 2, B_LINE[0]), arrowprops=arrow, zorder=4)
+    # the founder's mate in each cross, above its arrow: starting at the founder's bar and running over the lineage's bar (the arrows are
+    # shorter than the text)
+    ax.text(founder - FOUNDER_WIDTH / 2 - GAP, A_LINE[0] - 3 * pt, "× " + A_LINE_MATE, ha="right", va="bottom", **note)
+    ax.text(founder + FOUNDER_WIDTH / 2 + GAP, B_LINE[0] - 3 * pt, "× " + species_label(B_LINE_MATE), ha="left", va="bottom", **note)
 
     # black lines across the lineages' ends: the A line's (absorbed into fortis), the B line's (reproductive isolation: the Big Birds from here
     # on) and the Big Birds' (last observed)

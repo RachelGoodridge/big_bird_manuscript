@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from matplotlib.patches import Patch
+from matplotlib.transforms import blended_transform_factory, offset_copy
 from illustration_common import COLOR_MAP, REPO, tint
 from ibis_common import load_master
 
@@ -21,6 +22,10 @@ POPULATIONS = [("scandens", "Daphne"), ("fortis", "Daphne"), ("conirostris", "Es
 YEAR_CUTOFF = 1987
 GAP = 2                       # blank bars between populations
 GAP_AFTER = {"conirostris": 1}  # the founder (itself a conirostris) sits almost against the conirostris
+ISLAND_NAMES = {"Espanola": "Española"}
+ISLAND_LINE_BELOW = 2.0       # the line over each island's name, this many label sizes below the populations' names
+ISLAND_SIZE = 0.8             # the islands' names, as a fraction of the label size
+ISLAND_NAME_GAP = 6           # points between each island's line and its name
 LEGEND_SPACING = dict(columnspacing=0.85, handletextpad=0.4)  # between the legend's entries, and between each box and its text (in font sizes)
 # ------------------------------------------------------------------
 
@@ -41,6 +46,7 @@ def draw_admixture(ax, label_size=15, legend=True):
     data = load_ancestry()
     clusters = list(range(K))
     start = 0
+    extents = {}  # each population's first and last x
     for species, _ in POPULATIONS:
         birds = data[data["Species"] == species]
         means = birds[clusters].mean()
@@ -56,6 +62,7 @@ def draw_admixture(ax, label_size=15, legend=True):
         for top, (_, color) in list(zip(tops, layers))[::-1]:
             ax.stairs(top, edges, baseline=0, fill=True, color=color, linewidth=0)
 
+        extents[species] = (start, start + len(birds))
         middle = start + len(birds) / 2
         if species == "founder":
             ax.text(middle, 1.0, "*", ha="center", va="bottom", fontsize=label_size, fontweight="bold", color="black")  # the single founder
@@ -64,6 +71,22 @@ def draw_admixture(ax, label_size=15, legend=True):
             ax.text(middle, -0.07, f"G. {species}" if named_species else species, ha="center", va="top", fontsize=label_size, color="black",
                     style="italic" if named_species else "normal")
         start += len(birds) + GAP_AFTER.get(species, GAP)
+
+    # the island of each run of neighboring populations (the founder with the Daphne ones after it): a line under their names, the island under
+    # it. Each line spans exactly its populations (neighboring islands' lines are apart by the gap between their populations)
+    names_bottom = offset_copy(blended_transform_factory(ax.transData, ax.transAxes), fig=ax.figure, y=-ISLAND_LINE_BELOW * label_size,
+                               units="points")
+    runs = []
+    for species, island in POPULATIONS:
+        if runs and runs[-1][0] == island:
+            runs[-1][2] = species
+        else:
+            runs.append([island, species, species])
+    for island, first, last in runs:
+        x0, x1 = extents[first][0], extents[last][1]
+        ax.plot([x0, x1], [-0.07, -0.07], transform=names_bottom, color="black", linewidth=1.2, solid_capstyle="butt", clip_on=False)
+        ax.text((x0 + x1) / 2, -0.07, ISLAND_NAMES.get(island, island), transform=offset_copy(names_bottom, fig=ax.figure, y=-ISLAND_NAME_GAP, units="points"),
+                ha="center", va="top", fontsize=label_size * ISLAND_SIZE, color="black")
 
     ax.set_xlim(0, start - GAP_AFTER.get(POPULATIONS[-1][0], GAP))
     ax.set_ylim(0, 1)

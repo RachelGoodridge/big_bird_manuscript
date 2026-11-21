@@ -40,7 +40,8 @@ DAPHNE      = (-90.372, -0.422)
 ROUTE_ENTRY = (-90.20, -0.735)   # where the route reaches the Santa Cruz coast (SE corner)
 ROUTE_EXIT  = (-90.325, -0.455)    # where it leaves the coast for Daphne Major
 BIRD_IMAGE  = "conirostris_head.png"
-BIRD_BOX    = (0.845, 0.095, 0.13)   # photo's left, bottom, width (fractions of the map; height follows the photo)
+BIRD_BOX    = (0.06, 0.13)         # photo's bottom, width (fractions of the map; height follows the photo, and its right edge is as far from the
+                                   # map's right edge as its label is from the bottom edge)
 # ------------------------------------------------------------------
 
 HERE = os.path.dirname(os.path.abspath(__file__))  # files are found next to this script, from any working directory
@@ -170,16 +171,22 @@ def draw_map(ax, scale=1.0):
 
     # photo of the founder's species in the open ocean at the bottom right, labeled below
     photo = plt.imread(f"{HERE}/{BIRD_IMAGE}")
-    bx, by, bw = BIRD_BOX
+    by, bw = BIRD_BOX
     bh = bw * photo.shape[0] / photo.shape[1] * (x1 - x0) / (y1 - y0)  # keep the photo's aspect ratio (the map's axes are x1-x0 by y1-y0)
+    # (the species only: the photo is of a G. conirostris, not of the founder itself)
+    label = ax.annotate("G. conirostris", (1 - bw / 2, by), xycoords="axes fraction", xytext=(0, -2.5 * k), textcoords="offset points",
+                        style="italic", ha="center", va="top", fontsize=7.5 * k, color=TEXT, zorder=6)
+    # the photo as far from the map's right edge as its label is from the bottom edge
+    renderer = ax.figure.canvas.get_renderer()
+    ax.apply_aspect()
+    map_box = ax.get_window_extent(renderer)
+    bx = 1 - bw - (label.get_window_extent(renderer).y0 - map_box.y0) / map_box.width
+    label.xy = (bx + bw / 2, by)
     ax_bird = ax.inset_axes([bx, by, bw, bh])
     ax_bird.imshow(photo, interpolation="lanczos")
     ax_bird.set_xticks([]); ax_bird.set_yticks([]); ax_bird.grid(False)
     for s in ax_bird.spines.values():
         s.set_visible(True); s.set_linewidth(0.6 * k); s.set_color("#444444")
-    for text, style, below in [("G. conirostris", "italic", 2.5), ("(founder)", "normal", 12.5)]:  # two lines, each this many points below the photo
-        ax.annotate(text, (bx + bw / 2, by), xycoords="axes fraction", xytext=(0, -below * k), textcoords="offset points", style=style,
-                    ha="center", va="top", fontsize=7.5 * k, color=TEXT, zorder=6)
 
 
 if __name__ == "__main__":

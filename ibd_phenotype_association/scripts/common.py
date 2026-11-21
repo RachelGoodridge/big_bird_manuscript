@@ -130,33 +130,61 @@ def load_results(genome):
     return df
 
 
-def plot_manhattan(ax, sub, genome, spp, y_col, y_label, show_threshold, combine_from="17", point_size=5, tick_fontsize=9):
+def chromosome_runs(chroms):
+    """Chromosomes split into runs of consecutive numbers (["13", "14", "15", "17"] -> [["13", "14", "15"], ["17"]])."""
+    runs = []
+    for c in chroms:
+        if c.isdigit() and runs and runs[-1][-1].isdigit() and int(c) == int(runs[-1][-1]) + 1:
+            runs[-1].append(c)
+        else:
+            runs.append([c])
+    return runs
+
+
+def plot_manhattan(ax, sub, genome, spp, y_col, y_label, show_threshold, combine_from="17", point_size=5, tick_fontsize=9, by_window=False):
     """Manhattan plot of one species x trait (sub: its rows of load_results), colored by alternating chromosome. With show_threshold, a line at the
     largest p-value still significant at the FDR cutoff; otherwise significant windows in red and a line at no effect. Chromosomes from
-    combine_from on are too small for their own x tick label and share one."""
-    palette = {c: MANHATTAN_COLORS[spp][i % 2] for i, c in enumerate(genome.index)}
+    combine_from on are too small for their own x tick label and share one. With by_window, the tested windows are plotted side by side in genome
+    order (x = the window's index), so the parts of the genome that were not tested take no space; otherwise each window is at its position along
+    the genome. Returns sub with each window's x position ("x")."""
+    if by_window:
+        order = {c: i for i, c in enumerate(genome.index)}
+        sub = sub.sort_values("window_start").sort_values("chrom", key=lambda c: c.map(order), kind="stable").assign(x=np.arange(len(sub)))
+        chroms = list(sub["chrom"].unique())  # only chromosomes with tested windows, so the colors still alternate
+    else:
+        sub = sub.assign(x=sub["cum_pos"])
+        chroms = list(genome.index)
+    palette = {c: MANHATTAN_COLORS[spp][i % 2] for i, c in enumerate(chroms)}
     if show_threshold:
-        sns.scatterplot(data=sub, x="cum_pos", y=y_col, hue="chrom", palette=palette, linewidth=0, s=point_size, alpha=0.7, legend=False, ax=ax, zorder=1)
+        sns.scatterplot(data=sub, x="x", y=y_col, hue="chrom", palette=palette, linewidth=0, s=point_size, alpha=0.7, legend=False, ax=ax, zorder=1)
         if sub["significant"].any():
             ax.axhline(-np.log10(sub.loc[sub["significant"], "p_value"].max()), color="darkgray", linewidth=1, zorder=2)
         ax.set_ylim(bottom=0)
     else:
-        sns.scatterplot(data=sub[~sub["significant"]], x="cum_pos", y=y_col, hue="chrom", palette=palette, linewidth=0, s=point_size, alpha=0.7,
+        sns.scatterplot(data=sub[~sub["significant"]], x="x", y=y_col, hue="chrom", palette=palette, linewidth=0, s=point_size, alpha=0.7,
                         legend=False, ax=ax, zorder=1)
-        ax.scatter(sub.loc[sub["significant"], "cum_pos"], sub.loc[sub["significant"], y_col], color="red", linewidth=0, s=point_size * 1.6, alpha=0.7, zorder=2)
+        ax.scatter(sub.loc[sub["significant"], "x"], sub.loc[sub["significant"], y_col], color="red", linewidth=0, s=point_size * 1.6, alpha=0.7, zorder=2)
         ax.axhline(0, color="darkgray", linewidth=1, zorder=3)
 
-    # x ticks at each chromosome's center, with the small chromosomes sharing one label
-    chroms = list(genome.index)
+    # x ticks at each chromosome's center, with the small chromosomes sharing one label (with by_window: each run of consecutively numbered
+    # small chromosomes has its own label, e.g. "13-15", all centered under their tested windows)
     split = chroms.index(combine_from)
-    end = genome["start"] + genome["length"]
-    ax.set_xticks(list(genome["start"].iloc[:split] + genome["length"].iloc[:split] / 2) + [(genome["start"].iloc[split] + end.iloc[-1]) / 2])
-    ax.set_xticklabels(chroms[:split] + [f"{combine_from}-28, LGE22"], fontsize=tick_fontsize)
-    ax.set_xlim(0, end.iloc[-1])
+    if by_window:
+        first, last = sub.groupby("chrom", sort=False)["x"].min(), sub.groupby("chrom", sort=False)["x"].max()
+        groups = [[c] for c in chroms[:split]] + chromosome_runs(chroms[split:])
+        ax.set_xticks([(first[group[0]] + last[group[-1]]) / 2 for group in groups])
+        ax.set_xticklabels([group[0] if len(group) == 1 else f"{group[0]}-{group[-1]}" for group in groups], fontsize=tick_fontsize)
+        ax.set_xlim(-0.5, len(sub) - 0.5)
+    else:
+        end = genome["start"] + genome["length"]
+        ax.set_xticks(list(genome["start"].iloc[:split] + genome["length"].iloc[:split] / 2) + [(genome["start"].iloc[split] + end.iloc[-1]) / 2])
+        ax.set_xticklabels(chroms[:split] + [f"{combine_from}-28, LGE22"], fontsize=tick_fontsize)
+        ax.set_xlim(0, end.iloc[-1])
     ax.set_xlabel("Chromosome")
     ax.set_ylabel(y_label)
     ax.grid(False)  # no grid lines (only the threshold / zero line)
     sns.despine(top=True, right=True, ax=ax)
+    return sub
 
 
 def save_figure(path, fig=None):
