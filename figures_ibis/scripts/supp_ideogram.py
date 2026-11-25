@@ -115,8 +115,11 @@ def plot_ideogram(year_choice, profiles):
         "scandens": {"cmap": "Greens", "title": r"$\it{G.\,scandens}$ " + f"({year_choice})"},
     }
 
-    top_chroms    = chroms_ordered[:15]
-    bottom_chroms = chroms_ordered[15:30]
+    # the 14 largest autosomes (1-12) and chrZ (at the end) on top, the 16 small autosomes (13 on, magnified) below
+    autosomes     = [c for c in chroms_ordered if chr_dict[c] != "Z"]
+    top_chroms    = autosomes[:14] + [c for c in chroms_ordered if chr_dict[c] == "Z"]
+    bottom_chroms = autosomes[14:]
+    n_slots       = max(len(top_chroms), len(bottom_chroms))  # same spacing in both rows
     max_len_mb    = chrom_lengths.max()
     top_max_mb    = max(chrom_lengths[c] for c in top_chroms)
     bottom_max_mb = max(chrom_lengths[c] for c in bottom_chroms)
@@ -132,7 +135,7 @@ def plot_ideogram(year_choice, profiles):
         height_ratios=[top_max_mb, bottom_max_mb * 6.5],  # bottom row much taller
         width_ratios=[1, 1],
         hspace=0.00,    # minimal vertical gap between rows
-        wspace=0.30,    # wider gap so fortis cbar+label fits before scandens panel starts
+        wspace=0.15,    # gap between the species columns (each colorbar is inside its own column)
         top=0.91,
         bottom=0.04,
         left=0.05,
@@ -150,7 +153,7 @@ def plot_ideogram(year_choice, profiles):
         for row_idx, chrom_group in enumerate([top_chroms, bottom_chroms]):
             ax = axes_grid[(row_idx, species)]
             row_max_mb = max(chrom_lengths[c] for c in chrom_group)
-            ax.set_xlim(-CHROM_WIDTH * 0.8, len(chrom_group) * X_SPACING + CHROM_WIDTH * 0.3)
+            ax.set_xlim(-CHROM_WIDTH * 0.8, n_slots * X_SPACING + CHROM_WIDTH * 0.3)
 
             for i, chrom in enumerate(chrom_group):
                 bc, fq = profiles[(species, chrom)]
@@ -187,11 +190,13 @@ def plot_ideogram(year_choice, profiles):
             if row_idx == 0:
                 ax.set_title(cfg["title"], fontsize=FS_TITLE, fontfamily="DejaVu Serif", pad=6, color="#111111")
 
-    # colorbars just right of each species' top-row panel, matching its height
+    # colorbars in the top row's empty last slot (above LGE22, next to chrZ), from the chromosomes' base to the top of the panel
     fig.canvas.draw()
     for species, cfg in SPECIES_CONFIG.items():
-        bbox_top = axes_grid[(0, species)].get_position()
-        add_freq_colorbar(fig, [bbox_top.x1 + 0.008, bbox_top.y0, 0.010, bbox_top.height], cfg["cmap"], vmax)
+        ax = axes_grid[(0, species)]
+        to_fig = ax.transData + fig.transFigure.inverted()
+        (x0, y0), (_, y1) = to_fig.transform([(len(top_chroms) * X_SPACING, 0), (0, ax.get_ylim()[1])])
+        add_freq_colorbar(fig, [x0, y0, 0.010, y1 - y0], cfg["cmap"], vmax)
 
     save_figure(f"supplement/IBD_ideogram_{year_choice}.png")
 

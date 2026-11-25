@@ -17,7 +17,7 @@ BIN_SIZE = 0.1
 
 
 ########################### LOAD DATA ###########################
-# (a) beak pointedness PC fit on every measured fortis / scandens on Daphne, yearly mean +/- sd (years with at least 15 birds of a species),
+# (a) beak pointedness PC fit on every measured fortis / scandens on Daphne, yearly mean +/- sd (years with at least 20 birds of a species),
 # with every point the same size as the yearly means in panels c-d (not scaled by the number of birds)
 master = load_master()
 measured = add_bill_pcs(load_measured_fortis_scandens(master))
@@ -64,7 +64,7 @@ sns.despine(top=True, right=True, left=False, bottom=False, ax=ax_a)
 
 handles, labels = plot_ibd_over_time([ax_b, ax_c, ax_d], birds, summary, POINT_SCALE, LINE_SCALE, bird_point_size=25)  # points as in a, c, d
 
-plot_ibd_track(fig, ax_e, profiles, YEARS, chr_dict, chrom_lengths, vmax, BIN_SIZE, fontsize=17, combine_from="17")
+plot_ibd_track(fig, ax_e, profiles, YEARS, chr_dict, chrom_lengths, vmax, BIN_SIZE, fontsize=17)
 
 # one legend for panels a-d in a row under them, so it covers no data (panel b has every group)
 box_legend = gs[2, :].get_position(fig)

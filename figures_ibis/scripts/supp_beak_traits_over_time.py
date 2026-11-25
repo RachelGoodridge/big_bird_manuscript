@@ -12,7 +12,7 @@ birds = load_measured_fortis_scandens(load_master())
 birds = birds.assign(length=birds["bill.length"], depth=birds["bill.depth"], width=birds["bill.width"],
                      size=birds["bill.length"] + birds["bill.depth"] + birds["bill.width"], pointedness=birds["bill.length"] / birds["bill.depth"])
 
-# yearly mean, standard deviation, coefficient of variation, and point size for the number of birds (years with at least 15 birds of a species)
+# yearly mean, standard deviation, coefficient of variation, and point size for the number of birds (years with at least 20 birds of a species)
 mean, sd, cv, point_size = yearly_trait_summary(birds, TRAITS)
 
 

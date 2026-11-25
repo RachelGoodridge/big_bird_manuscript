@@ -18,24 +18,10 @@ print(paste("plotting K =", k))
 species_ancestry <- c(fortis = "V1", scandens = "V6", conirostris = "V2")
 highlight_colors <- c(fortis = "#1C86EE", scandens = "#43CD80", conirostris = "#ff3030dd")
 
-# get all the records from the master spreadsheet
-all_records <- read.csv("/local/storage/all_birds_highcov_lowcov/Finch_Database_V2.csv", header = TRUE, fill = TRUE, na.strings = c("", "NA", "XX"), stringsAsFactors = FALSE)
-all_records <- all_records[!duplicated(all_records$meaningful.unique),]  # remove duplicates (probably they are all re-captures)
-all_records <- all_records[, c("meaningful.unique", "Species", "Island", "First.year", "First.year.min", "Year.born", "Last.year")]
-
-# first year alive: the earliest of year born and first year recorded (last year seen if none are known)
-all_records <- all_records %>% mutate(year = coalesce(pmin(Year.born, First.year, First.year.min, na.rm = TRUE), Last.year),
-                                       last.year = coalesce(Last.year, year))
-
-# update the newest lineage classifications
-bbs_lines <- read.csv("/local/storage/BigBirds/BigBirds.csv")
-bbs_lines <- bbs_lines[!duplicated(bbs_lines$meaningful.unique),]
-all_records$lineage <- bbs_lines$lineage[match(all_records$meaningful.unique, bbs_lines$meaningful.unique)]
-all_records <- all_records %>% mutate(lineage = coalesce(lineage, Species))
-all_records <- all_records %>% select(-Species) %>% rename(Species = lineage)
-
-# correct the species for an individual
-all_records <- all_records |> mutate(Species = if_else(meaningful.unique == "01Dap21269", "magnirostris", Species))
+# every bird from the master database: one row per bird, with its first / last years alive, the newest lineage classifications and the
+# species corrections (see ../../master.R)
+source("../../master.R")
+all_records <- load_master()
 
 # 01_whole_data_bed.sh now projects every sample in the raw VCF
 # Restrict this plot to exactly the populations of interest.

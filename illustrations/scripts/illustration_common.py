@@ -5,10 +5,13 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import to_rgb
 
 # shared by the hand-made figure panels (map, pedigree, deme diagram) and the figures assembled from them. Paths are found from this file's
-# location, so scripts work from any working directory. (Not named common.py like the other folders' shared modules, so that
+# location (illustrations/scripts/), so scripts work from any working directory; figures are saved in illustrations/figures/ and their
+# inputs are in illustrations/data/. (Not named common.py like the other folders' shared modules, so that
 # figures_ibis/scripts/fig_3_combined.py can import the deme diagram next to its own common.py)
-ILLUSTRATIONS = os.path.dirname(os.path.abspath(__file__))
+ILLUSTRATIONS = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REPO = os.path.dirname(ILLUSTRATIONS)
+FIGURES = f"{ILLUSTRATIONS}/figures"
+DATA = f"{ILLUSTRATIONS}/data"
 
 # the species / lineage colors and the plot theme (font) of the other figures (loaded by path since the files are all named common.py)
 if "ibis_common" not in sys.modules:
@@ -33,10 +36,10 @@ def tint(color, amount):
 
 
 def save_svg(name, fig, pdf=False):
-    """Save (and close) a figure as an svg in illustrations/. pdf: also save it as a vector pdf of the same name (for the journal), with its
+    """Save (and close) a figure as an svg in illustrations/figures/. pdf: also save it as a vector pdf of the same name (for the journal), with its
     text kept as text."""
-    fig.savefig(f"{ILLUSTRATIONS}/{name}", dpi=600, bbox_inches="tight", pad_inches=0.05)  # dpi: resolution of embedded images (the photo)
+    fig.savefig(f"{FIGURES}/{name}", dpi=600, bbox_inches="tight", pad_inches=0.05)  # dpi: resolution of embedded images (the photo)
     if pdf:
         with plt.rc_context({"pdf.fonttype": 42}):
-            fig.savefig(f"{ILLUSTRATIONS}/{os.path.splitext(name)[0]}.pdf", dpi=600, bbox_inches="tight", pad_inches=0.05)
+            fig.savefig(f"{FIGURES}/{os.path.splitext(name)[0]}.pdf", dpi=600, bbox_inches="tight", pad_inches=0.05)
     plt.close(fig)

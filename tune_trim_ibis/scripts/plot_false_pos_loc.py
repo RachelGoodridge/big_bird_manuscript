@@ -39,5 +39,7 @@ for ax in axes[len(chroms):]:
     ax.set_visible(False)
 
 plt.tight_layout()
-plt.savefig("trimming_plots/false_pos_loc.png", dpi=450, bbox_inches="tight", pad_inches=0.05)
+# the tight bounding box ignores how far x labels stick out sideways, so the last column's (wider than its panel) are added explicitly
+plt.savefig("trimming_plots/false_pos_loc.png", dpi=450, bbox_inches="tight", pad_inches=0.05,
+            bbox_extra_artists=[ax.xaxis.label for ax in axes[:len(chroms)]])
 plt.close()

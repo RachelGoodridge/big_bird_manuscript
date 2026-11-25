@@ -3,7 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 mkdir -p data work output figures
 
-VCF=/local/storage/all_birds_highcov_lowcov/autosomes_2022chrZ_all_highcov_lowcov_phased.vcf.gz
+VCF=/local/storage/all_birds_highcov_lowcov/autosomes_chrZ_all_highcov_lowcov.vcf.gz
 PLINK2=/programs/plink2_linux_20230721/plink2
 REGION=chr6:10000000-30500000  # CHR6_REGION in ibd_phenotype_association/scripts/common.py
 

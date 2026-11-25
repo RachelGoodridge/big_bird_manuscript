@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Circle, Polygon
 from illustration_common import COLOR_MAP, save_svg, set_theme, tint
 
-# simplified pedigree of the Big Bird lineage (figure 1B): the founder and fortis produced the A line and the B line, and the B line became the Big
-# Birds, whose fate is unknown. All positions are in the same arbitrary units and follow from the few settings below, so everything stays aligned
+# simplified pedigree of the Big Bird lineage (on its own; figure 1B is the timeline): the founder and fortis produced the A line and the B
+# line, and the B line became the Big Birds, whose fate is unknown. All positions are in the same arbitrary units and follow from the few settings below, so everything stays aligned
 
 # ---------------- settings you may want to change ----------------
 RADIUS = 1.5                 # of the circles (large enough to hold the labels)
@@ -61,4 +61,4 @@ if __name__ == "__main__":
     set_theme()
     fig, ax = plt.subplots(figsize=(4.2, 7.5))
     draw_pedigree(ax)
-    save_svg("figure1_pedigree.svg", fig)
+    save_svg("founder_pedigree.svg", fig)

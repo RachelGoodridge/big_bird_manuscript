@@ -7,19 +7,10 @@ args <- commandArgs(trailingOnly = FALSE)
 script_path <- gsub("--file=", "", args[grep("--file=", args)])
 if (length(script_path) > 0) setwd(dirname(script_path))
 
-# get species for every whole-data individual from the master spreadsheet
-master <- read.csv("/local/storage/all_birds_highcov_lowcov/Finch_Database_V2.csv", header = TRUE, fill = TRUE, na.strings = c("", "NA", "XX"), stringsAsFactors = FALSE)
-master <- master[!duplicated(master$meaningful.unique),]
-master <- master[, c("meaningful.unique", "Species", "Island")]
-
-# the Big Bird pedigree (A line / B line / Big Birds / founder) overrides raw Species where tracked
-bbs_lines <- read.csv("/local/storage/BigBirds/BigBirds.csv")
-bbs_lines <- bbs_lines[!duplicated(bbs_lines$meaningful.unique),]
-master$lineage <- bbs_lines$lineage[match(master$meaningful.unique, bbs_lines$meaningful.unique)]
-master <- master %>% mutate(Species = coalesce(lineage, Species)) %>% select(-lineage)
-
-# correct the species for an individual
-master <- master |> mutate(Species = if_else(meaningful.unique == "01Dap21269", "magnirostris", Species))
+# species for every whole-data individual from the master database (one row per bird, with the Big Bird pedigree's lineages and the species
+# corrections; see ../../master.R)
+source("../../master.R")
+master <- load_master()[, c("meaningful.unique", "Species", "Island")]
 
 # Restrict this plot to exactly the populations of interest.
 allowed_combos <- tribble(

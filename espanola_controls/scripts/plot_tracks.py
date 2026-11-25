@@ -102,9 +102,15 @@ for spp in FOCAL_SPECIES:
     ys = [row_y[(spp, f)] for f in focal_birds]
     ax.text(0, (min(ys) + max(ys) + TRACK) / 2, species_label(spp), transform=species_trans, ha="center", va="center", rotation=90, fontsize=FONT + 3)
 
-split = [chr_dict[c] for c in chroms].index("17")
-ax.set_xticks([offset[c] + chrom_lengths[c] / 2 for c in chroms[:split]] + [(offset[chroms[split]] + total) / 2])
-ax.set_xticklabels([str(chr_dict[c]) for c in chroms[:split]] + ["17-28, LGE22"], fontsize=FONT)
+# as in figure 2E: runs of small chromosomes share one tick (13-15, 17-28), centered under them; the others (LGE22 and Z too) have their own
+names = [str(chr_dict[c]) for c in chroms]
+groups = [[c] for c in chroms]
+for first, last in [("13", "15"), ("17", "28")]:
+    run = chroms[names.index(first):names.index(last) + 1]
+    groups = [g for g in groups if g[0] not in run] + [run]
+groups.sort(key=lambda g: chroms.index(g[0]))
+ax.set_xticks([(offset[g[0]] + offset[g[-1]] + chrom_lengths[g[-1]]) / 2 for g in groups])
+ax.set_xticklabels([str(chr_dict[g[0]]) if len(g) == 1 else f"{chr_dict[g[0]]}-{chr_dict[g[-1]]}" for g in groups], fontsize=FONT)
 ax.set_xlabel("Chromosome", fontsize=FONT + 4, labelpad=8)
 ax.tick_params(axis="both", length=0)
 ax.set_yticks([])

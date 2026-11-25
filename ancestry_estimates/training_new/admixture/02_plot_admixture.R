@@ -9,16 +9,10 @@ args <- commandArgs(trailingOnly = FALSE)
 script_path <- gsub("--file=", "", args[grep("--file=", args)])
 if (length(script_path) > 0) setwd(dirname(script_path))
 
-# get species + island for every training individual from the master spreadsheet
-master <- read.csv("/local/storage/all_birds_highcov_lowcov/Finch_Database_V2.csv", header = TRUE, fill = TRUE, na.strings = c("", "NA", "XX"), stringsAsFactors = FALSE)
-master <- master[!duplicated(master$meaningful.unique),]
-master <- master[, c("meaningful.unique", "Species", "Island")]
-
-# the founder is its own population (it's the individual that seeded the Big Bird lineage)
-bbs_lines <- read.csv("/local/storage/BigBirds/BigBirds.csv")
-bbs_lines <- bbs_lines[!duplicated(bbs_lines$meaningful.unique),]
-master$lineage <- bbs_lines$lineage[match(master$meaningful.unique, bbs_lines$meaningful.unique)]
-master <- master %>% mutate(Species = coalesce(lineage, Species)) %>% select(-lineage)
+# species + island for every training individual from the master database (one row per bird, with the newest lineage classifications, so
+# the founder is its own population, and the species corrections; see ../../master.R)
+source("../../master.R")
+master <- load_master()[, c("meaningful.unique", "Species", "Island")]
 
 # clean up island names: Culpepper is the old name for Darwin island, and Wenman for Wolf
 master <- master %>% mutate(Island = recode(Island, "Culpepper(Darwin)" = "Darwin", "Wenman(Wolf)" = "Wolf"))

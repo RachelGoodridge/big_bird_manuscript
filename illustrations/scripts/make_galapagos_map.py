@@ -4,8 +4,8 @@ from Española to Daphne Major.
 
 Setup (once):  pip install geopandas matplotlib
 Run:           python make_galapagos_map.py
-Needs:         galapagos_land.geojson and conirostris_head.png
-Writes:        galapagos_map.svg
+Needs:         data/galapagos_land.geojson and data/conirostris_head.png
+Writes:        figures/galapagos_map.svg
 Also used by:  fig_1_combined.py, which draws the map as panel A with draw_map()
 
 Coastlines: derived from OpenStreetMap land polygons
@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patheffects as pe
 from pyproj import Geod
 from shapely.geometry import Polygon, LineString, Point
-from illustration_common import set_theme
+from illustration_common import DATA, FIGURES, set_theme
 
 # ---------------- settings you may want to change ----------------
 SHOW_TOWNS  = False              # True adds Puerto Ayora etc.
@@ -44,10 +44,9 @@ BIRD_BOX    = (0.06, 0.13)         # photo's bottom, width (fractions of the map
                                    # map's right edge as its label is from the bottom edge)
 # ------------------------------------------------------------------
 
-HERE = os.path.dirname(os.path.abspath(__file__))  # files are found next to this script, from any working directory
 UTM = 32715  # UTM zone 15S, metres
 
-land = gpd.read_file(f"{HERE}/galapagos_land.geojson")
+land = gpd.read_file(f"{DATA}/galapagos_land.geojson")
 land["geometry"] = [Polygon(g.exterior) for g in land.geometry]  # drop lake holes
 
 
@@ -170,7 +169,7 @@ def draw_map(ax, scale=1.0):
         s.set_visible(True); s.set_linewidth(0.6 * k); s.set_color("#444444")
 
     # photo of the founder's species in the open ocean at the bottom right, labeled below
-    photo = plt.imread(f"{HERE}/{BIRD_IMAGE}")
+    photo = plt.imread(f"{DATA}/{BIRD_IMAGE}")
     by, bw = BIRD_BOX
     bh = bw * photo.shape[0] / photo.shape[1] * (x1 - x0) / (y1 - y0)  # keep the photo's aspect ratio (the map's axes are x1-x0 by y1-y0)
     # (the species only: the photo is of a G. conirostris, not of the founder itself)
@@ -196,4 +195,4 @@ if __name__ == "__main__":
     x0, x1, y0, y1 = EXTENT
     fig, ax = plt.subplots(figsize=(FIG_WIDTH, FIG_WIDTH * (y1 - y0) / (x1 - x0)))
     draw_map(ax)
-    fig.savefig(f"{HERE}/galapagos_map.svg", dpi=600, bbox_inches="tight")
+    fig.savefig(f"{FIGURES}/galapagos_map.svg", dpi=600, bbox_inches="tight")

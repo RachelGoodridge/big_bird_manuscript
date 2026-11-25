@@ -1,5 +1,8 @@
 import matplotlib.pyplot as plt
+import matplotlib.transforms as mtransforms
 from common import FOCAL_SPECIES, TRAITS, genome_layout, load_results, plot_manhattan, save_figure, set_plot_theme, species_label
+
+TICK_NUDGE = {"26": -5, "28": 5}  # horizontal shifts (points) of the x labels of chromosomes 26 and 28, which have too few windows to fit side by side
 
 set_plot_theme()
 genome = genome_layout()
@@ -14,6 +17,10 @@ def manhattan_grid(y_col, y_label, path, show_threshold):
             ax = axes[row, col]
             plot_manhattan(ax, df[(df["species"] == spp) & (df["trait"] == trait)], genome, spp, y_col, y_label, show_threshold)
             ax.set_title(f"{trait} in " + species_label(spp))
+    for ax in axes.flat:
+        for label in ax.get_xticklabels():
+            if label.get_text() in TICK_NUDGE:
+                label.set_transform(label.get_transform() + mtransforms.ScaledTranslation(TICK_NUDGE[label.get_text()] / 72, 0, fig.dpi_scale_trans))
     plt.tight_layout()
     save_figure(path, fig)
 

@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 from common import REPO, add_panel_letters, load_master, load_max_kin, plot_max_kin, save_figure, set_plot_theme
 
-# the schematic of the populations on Daphne Major through time (drawn by illustrations/demes_diagram.py)
-sys.path.append(f"{REPO}/illustrations")
+# the schematic of the populations on Daphne Major through time (drawn by illustrations/scripts/demes_diagram.py)
+sys.path.append(f"{REPO}/illustrations/scripts")
 from demes_diagram import draw_demes
 
 # figure 3: (A, B) kinship of every fortis / scandens to its closest relative among the founder's descendants,
@@ -12,7 +12,7 @@ from demes_diagram import draw_demes
 
 # ---------------- settings you may want to change ----------------
 KINSHIP_SIZE = (12, 5)      # size the two kinship panels are laid out for on their own; their proportions and spacing are kept (inches)
-DIAGRAM_SIZE = (10, 8)      # size of the schematic's own figure (illustrations/demes_diagram.py), whose proportions are kept
+DIAGRAM_SIZE = (10, 8)      # size of the schematic's own figure (illustrations/scripts/demes_diagram.py), whose proportions are kept
 SCALE = 1.3                 # everything in the kinship plot (panels, text, points) is this many times larger than on its own
 DIAGRAM_GAP = 1.15          # blank space between the kinship panels and the schematic (inches; holds the degrees of relatedness)
 DIAGRAM_LABEL_SIZE = 15     # names in the schematic

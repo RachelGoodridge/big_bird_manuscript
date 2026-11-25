@@ -3,7 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 mkdir -p work figures
 
-FULL_VCF=/local/storage/all_birds_highcov_lowcov/autosomes_2022chrZ_all_highcov_lowcov_phased.vcf.gz
+FULL_VCF=/local/storage/all_birds_highcov_lowcov/autosomes_chrZ_all_highcov_lowcov.vcf.gz
 PLINK2=/programs/plink2_linux_20230721/plink2
 
 # the Enbody et al. (2023) SNPs within each large-effect beak locus

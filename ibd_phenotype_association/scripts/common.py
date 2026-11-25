@@ -18,9 +18,9 @@ _spec = importlib.util.spec_from_file_location("figures_common", f"{REPO}/figure
 sys.modules["figures_common"] = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(sys.modules["figures_common"])
 from ibis_common import ibd_label
-from figures_common import (COLOR_MAP, FOCAL_SPECIES, WINDOW_COVERAGE, add_beak_body_ratio, add_bill_pcs, add_body_pc, eigen_grm, lmm_lrt,
-                            load_bim, load_chromosomes, load_founder_coef, load_loco_grm, load_master, load_trimmed_segments, make_windows,
-                            set_plot_theme, species_label, window_coverage)
+from figures_common import (COLOR_MAP, FOCAL_SPECIES, WINDOW_COVERAGE, add_beak_body_ratio, add_bill_pcs, add_body_pc, drop_chrz_missing,
+                            eigen_grm, lmm_lrt, load_bim, load_chromosomes, load_founder_coef, load_loco_grm, load_master,
+                            load_trimmed_segments, make_windows, set_plot_theme, species_label, window_coverage)
 
 # traits tested, and the covariates of each (beak size / pointedness also control for body size, i.e. allometry)
 TRAITS = ["PC(Body Size)", "PC(Beak Size)", "PC(Beak Pointedness)", "Beak:Body Ratio"]
@@ -52,17 +52,25 @@ def _ibd_snps_per_chromosome():
 
 
 def loco_ibd_fractions():
-    """Fraction of SNPs in (trimmed) IBD with the founder outside each chromosome, for every bird with IBD (bird x IBIS chromosome code)."""
+    """Fraction of SNPs in (trimmed) IBD with the founder outside each chromosome, for every bird with IBD (bird x IBIS chromosome code). Like
+    the LOCO GRMs, only the autosomes count (chrZ is never included), so the autosomes' values are the same as without chrZ, and chrZ's is the
+    fraction over all the autosomes."""
     ibd, snps = _ibd_snps_per_chromosome()
-    return (ibd.sum(axis=1).to_numpy()[:, None] - ibd) / (snps.sum() - snps)
+    autosomal = snps.index != next(code for code, name in load_chromosomes().items() if name == "Z")
+    own_ibd, own_snps = ibd * autosomal, snps * autosomal  # what is taken out for each chromosome (nothing for chrZ)
+    return (ibd.loc[:, autosomal].sum(axis=1).to_numpy()[:, None] - own_ibd) / (snps[autosomal].sum() - own_snps)
 
 
 REGION_COVERAGE = 0.5  # region test: birds whose IBD covers at least this fraction of the region, vs birds with none in it
 REGION_GROUPS = ["No IBD", f"IBD ≥ {REGION_COVERAGE:.0%}"]
 
 # region of chromosome 6 where beak pointedness is associated with IBD in scandens across the whole stretch (windows mostly p < 0.02,
-# falling off sharply on either side), tested as a whole in supp_chr6_traits.py and figure 4: chromosome name, start, end (bp)
+# falling off sharply on either side), tested as a whole in supp_region_traits.py and figure 4: chromosome name, start, end (bp)
 CHR6_REGION = ("6", 10_000_000, 30_500_000)
+
+# stretch of chrZ where body size is associated with IBD in scandens (FDR-significant windows from 16.0 to 60.9 Mb, with only short gaps; the
+# false positive region excluded at 27.5-32.4 Mb has no IBD), tested as a whole in supp_region_traits.py: chromosome name, start, end (bp)
+CHRZ_REGION = ("Z", 16_000_000, 61_000_000)
 
 
 def region_test_birds(spp, chrom, start, end):
@@ -70,7 +78,7 @@ def region_test_birds(spp, chrom, start, end):
     REGION_COVERAGE of the region covered by their (summed) IBD segments or none in it (ibd_group; birds with less are left out, like the
     window test's toss group), in the order of the chromosome's LOCO GRM, with the fraction of SNPs in IBD outside the chromosome (loco_ibd),
     and the eigendecomposition of the GRM of these birds."""
-    K, ids = load_loco_grm(spp, chrom)
+    K, ids = drop_chrz_missing(*load_loco_grm(spp, chrom), chrom)  # on chrZ, without the birds with much of it missing
     birds = load_birds(spp).set_index("ind").loc[ids]
     seg = load_trimmed_segments()
     region = pd.DataFrame({"chrom": [chrom], "start": [start], "end": [end]})
@@ -122,9 +130,8 @@ def genome_layout():
 
 
 def load_results(genome):
-    """Association results with -log10 p, FDR significance, and each window's midpoint on the genome-wide axis."""
+    """Association results with -log10 p and FDR significance."""
     df = pd.read_csv(RESULTS, dtype={"chrom": str})
-    df["cum_pos"] = (df["window_start"] + df["window_end"]) / 2 + df["chrom"].map(genome["start"])
     df["neg_log10_p"] = -np.log10(df["p_value"])
     df["significant"] = df["q_value"] < FDR
     return df
@@ -141,19 +148,15 @@ def chromosome_runs(chroms):
     return runs
 
 
-def plot_manhattan(ax, sub, genome, spp, y_col, y_label, show_threshold, combine_from="17", point_size=5, tick_fontsize=9, by_window=False):
+def plot_manhattan(ax, sub, genome, spp, y_col, y_label, show_threshold, combine_from="13", point_size=5, tick_fontsize=9):
     """Manhattan plot of one species x trait (sub: its rows of load_results), colored by alternating chromosome. With show_threshold, a line at the
-    largest p-value still significant at the FDR cutoff; otherwise significant windows in red and a line at no effect. Chromosomes from
-    combine_from on are too small for their own x tick label and share one. With by_window, the tested windows are plotted side by side in genome
-    order (x = the window's index), so the parts of the genome that were not tested take no space; otherwise each window is at its position along
-    the genome. Returns sub with each window's x position ("x")."""
-    if by_window:
-        order = {c: i for i, c in enumerate(genome.index)}
-        sub = sub.sort_values("window_start").sort_values("chrom", key=lambda c: c.map(order), kind="stable").assign(x=np.arange(len(sub)))
-        chroms = list(sub["chrom"].unique())  # only chromosomes with tested windows, so the colors still alternate
-    else:
-        sub = sub.assign(x=sub["cum_pos"])
-        chroms = list(genome.index)
+    largest p-value still significant at the FDR cutoff; otherwise significant windows in red and a line at no effect. The tested windows are
+    plotted side by side in genome order (x = the window's index), so the parts of the genome that were not tested take no space. Chromosomes from
+    combine_from on are too small for their own x tick label: each run of consecutively numbered ones shares one (LGE22 and Z keep their own).
+    Returns sub with each window's x position ("x")."""
+    order = {c: i for i, c in enumerate(genome.index)}
+    sub = sub.sort_values("window_start").sort_values("chrom", key=lambda c: c.map(order), kind="stable").assign(x=np.arange(len(sub)))
+    chroms = list(sub["chrom"].unique())  # only chromosomes with tested windows, so the colors still alternate
     palette = {c: MANHATTAN_COLORS[spp][i % 2] for i, c in enumerate(chroms)}
     if show_threshold:
         sns.scatterplot(data=sub, x="x", y=y_col, hue="chrom", palette=palette, linewidth=0, s=point_size, alpha=0.7, legend=False, ax=ax, zorder=1)
@@ -166,20 +169,13 @@ def plot_manhattan(ax, sub, genome, spp, y_col, y_label, show_threshold, combine
         ax.scatter(sub.loc[sub["significant"], "x"], sub.loc[sub["significant"], y_col], color="red", linewidth=0, s=point_size * 1.6, alpha=0.7, zorder=2)
         ax.axhline(0, color="darkgray", linewidth=1, zorder=3)
 
-    # x ticks at each chromosome's center, with the small chromosomes sharing one label (with by_window: each run of consecutively numbered
-    # small chromosomes has its own label, e.g. "13-15", all centered under their tested windows)
+    # x ticks centered under each chromosome's tested windows, with each run of consecutively numbered small chromosomes sharing one (e.g. "13-15")
     split = chroms.index(combine_from)
-    if by_window:
-        first, last = sub.groupby("chrom", sort=False)["x"].min(), sub.groupby("chrom", sort=False)["x"].max()
-        groups = [[c] for c in chroms[:split]] + chromosome_runs(chroms[split:])
-        ax.set_xticks([(first[group[0]] + last[group[-1]]) / 2 for group in groups])
-        ax.set_xticklabels([group[0] if len(group) == 1 else f"{group[0]}-{group[-1]}" for group in groups], fontsize=tick_fontsize)
-        ax.set_xlim(-0.5, len(sub) - 0.5)
-    else:
-        end = genome["start"] + genome["length"]
-        ax.set_xticks(list(genome["start"].iloc[:split] + genome["length"].iloc[:split] / 2) + [(genome["start"].iloc[split] + end.iloc[-1]) / 2])
-        ax.set_xticklabels(chroms[:split] + [f"{combine_from}-28, LGE22"], fontsize=tick_fontsize)
-        ax.set_xlim(0, end.iloc[-1])
+    first, last = sub.groupby("chrom", sort=False)["x"].min(), sub.groupby("chrom", sort=False)["x"].max()
+    groups = [[c] for c in chroms[:split]] + chromosome_runs(chroms[split:])
+    ax.set_xticks([(first[group[0]] + last[group[-1]]) / 2 for group in groups])
+    ax.set_xticklabels([group[0] if len(group) == 1 else f"{group[0]}-{group[-1]}" for group in groups], fontsize=tick_fontsize)
+    ax.set_xlim(-0.5, len(sub) - 0.5)
     ax.set_xlabel("Chromosome")
     ax.set_ylabel(y_label)
     ax.grid(False)  # no grid lines (only the threshold / zero line)

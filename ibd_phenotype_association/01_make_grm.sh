@@ -22,10 +22,12 @@ for SPP in fortis scandens; do
   # GEMMA needs a phenotype to build a relatedness matrix, so give every bird the same dummy value
   awk '{print 1}' grm/$SPP/plink.fam > grm/$SPP/dummy_pheno.txt
 
-  # one leave-one-chromosome-out (LOCO) centered relatedness matrix per chromosome, from the SNPs on all other chromosomes
+  # one leave-one-chromosome-out (LOCO) centered relatedness matrix per chromosome, from the SNPs on all other autosomes (chrZ is never used
+  # in a matrix, so the autosomes' matrices are the same as without chrZ, and chrZ's is from all the autosomes)
+  CHRZ=$(awk '$1 == "chrZ" {print $2}' ../tune_trim_ibis/dataset/chr_map.txt)
   CHROMS=$(cut -f1 grm/$SPP/plink.bim | sort -un)
   for CHR in $CHROMS; do
-    awk -v chr="$CHR" '$1 != chr {print $2}' grm/$SPP/plink.bim > grm/$SPP/snps_excl_chr$CHR.txt
+    awk -v chr="$CHR" -v chrz="$CHRZ" '$1 != chr && $1 != chrz {print $2}' grm/$SPP/plink.bim > grm/$SPP/snps_excl_chr$CHR.txt
   done
   echo $CHROMS | tr ' ' '\n' | xargs -P $N_PARALLEL -I{} sh -c \
     "$GEMMA -bfile grm/$SPP/plink -p grm/$SPP/dummy_pheno.txt -gk 1 -snps grm/$SPP/snps_excl_chr{}.txt -outdir grm/$SPP -o loco_chr{} > /dev/null && echo '$SPP chr{} done'"

@@ -10,7 +10,7 @@ CONTROLS = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REPO = os.path.dirname(CONTROLS)
 ORIGINAL = f"{REPO}/tune_trim_ibis"  # the original IBIS run
 
-FULL_VCF = "/local/storage/all_birds_highcov_lowcov/autosomes_2022chrZ_all_highcov_lowcov_phased.vcf.gz"
+FULL_VCF = "/local/storage/all_birds_highcov_lowcov/autosomes_chrZ_all_highcov_lowcov.vcf.gz"
 IBIS_PREFIX = f"{CONTROLS}/output/espanola"  # IBIS output (.seg, .coef)
 FOCAL_BIRDS = f"{CONTROLS}/dataset/focal_birds.txt"  # the founder and the Española conirostris, first in the plink files
 

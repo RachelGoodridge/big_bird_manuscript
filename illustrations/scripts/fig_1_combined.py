@@ -5,8 +5,8 @@ from admixture_panel import draw_admixture
 from make_galapagos_map import EXTENT, FIG_WIDTH, draw_map
 from timeline import SIZE as TIMELINE_SIZE, draw_timeline
 
-# alternative to figure 1 (fig_1_combined.py) with the timeline of the Big Bird lineage (timeline.py) as panel B instead of the pedigree:
-# (A) map of the founder's dispersal to Daphne Major, (B) timeline of the Big Bird lineage, (C) ADMIXTURE ancestry of each population
+# figure 1: (A) map of the founder's dispersal to Daphne Major, (B) timeline of the Big Bird lineage (timeline.py), (C) ADMIXTURE ancestry of
+# each population
 
 # ---------------- settings you may want to change ----------------
 WIDTH = 16                 # figure width (inches)
@@ -53,4 +53,4 @@ if PANEL_LETTERS:
                ("C", box_admixture.x0 - gap, legend_y, "center")]
     for letter, x, y, va in letters:
         fig.text(x, y, letter, ha="right", va=va, fontsize=24, fontweight="bold", color="black")
-save_svg("figure1v2.svg", fig, pdf=True)
+save_svg("figure1.svg", fig, pdf=True)

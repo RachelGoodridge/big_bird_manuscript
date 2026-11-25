@@ -13,21 +13,11 @@ print(paste("plotting K =", k))
 
 # get all the Daphne fortis/scandens records from the master spreadsheet
 species_order <- c("fortis", "scandens")
-records <- read.csv("/local/storage/all_birds_highcov_lowcov/Finch_Database_V2.csv", header = TRUE, fill = TRUE, na.strings = c("", "NA", "XX"), stringsAsFactors = FALSE)
-records <- records[!duplicated(records$meaningful.unique), ]  # remove duplicates (probably they are all re-captures)
-
-# update the newest lineage classifications (as in 02_plot_admixture.R), so A line / B line / Big Birds aren't counted as fortis
-bbs_lines <- read.csv("/local/storage/BigBirds/BigBirds.csv")
-bbs_lines <- bbs_lines[!duplicated(bbs_lines$meaningful.unique),]
-records$Species <- coalesce(bbs_lines$lineage[match(records$meaningful.unique, bbs_lines$meaningful.unique)], records$Species)
-
-# correct the species for an individual (before keeping only fortis / scandens)
-records <- records |> mutate(Species = if_else(meaningful.unique == "01Dap21269", "magnirostris", Species))
-records <- records %>% filter(Island == "Daphne", Species %in% species_order)
-
-# first year alive: the earliest of year born, first year seen, and earliest year recorded (last year seen if none are known), as in 02_plot_admixture.R
-records <- records %>% mutate(start = coalesce(pmin(Year.born, First.year, First.year.min, na.rm = TRUE), Last.year), end = coalesce(Last.year, start)) %>%
-  select(ind = meaningful.unique, Species, start, end)
+# (one row per bird, with the newest lineage classifications, so A line / B line / Big Birds aren't counted as fortis, the species corrections,
+# and the first / last years alive; see ../../master.R)
+source("../../master.R")
+records <- load_master() %>% filter(Island == "Daphne", Species %in% species_order) %>%
+  select(ind = meaningful.unique, Species, start = year, end = last.year)
 
 # read the admixture data and add the species + years
 data <- read.table(paste0("finches.", k, ".Q"))
@@ -38,7 +28,7 @@ data <- inner_join(data, records, by = "ind") %>% filter(!is.na(start))
 data <- data %>% rename(anc_fort = V1, anc_scan = V6) %>% select(ind, Species, start, end, anc_fort, anc_scan)
 
 # Function to summarize ancestry for each species
-df_expanded <- data %>% rowwise() %>% mutate(year = list(start:end)) %>% unnest(year)
+df_expanded <- data %>% rowwise() %>% mutate(year = list(start:end)) %>% unnest(year) %>% filter(!year %in% unsampled_years())  # no fieldwork
 summarize_species <- function(species_name) {
   df_expanded %>% filter(Species == species_name) %>% group_by(year) %>% summarise(n_alive = n(), across(starts_with("anc_"),
     list(mean = ~mean(.x, na.rm = TRUE), sd = ~sd(.x, na.rm = TRUE)), .names = "{.col}_{.fn}")) %>% pivot_longer(cols = starts_with("anc_"),

@@ -15,9 +15,11 @@ num_ind = seg_untrim.ind.nunique()
 # get the dataset after trimming (positions in Mb)
 trim_seg = pd.read_pickle("output/trim_seg_founder_neg_max_error.pkl")
 
-# setup the plot
-fig, axes = plt.subplots(6, 5, figsize=(30, 18), sharex=False, sharey=True)
+# setup the plot: one panel per chromosome (31 with chrZ) in 8 rows of 4, the last one empty
+fig, axes = plt.subplots(8, 4, figsize=(24, 24), sharex=False, sharey=True)
 axes = axes.flatten()
+for ax in axes[len(chr_dict):]:
+    ax.set_visible(False)
 
 for ax, chrom in zip(axes, chr_dict):
     # plot the locations of the IBD segments

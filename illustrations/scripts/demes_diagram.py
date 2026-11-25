@@ -151,4 +151,4 @@ if __name__ == "__main__":
     set_theme()
     fig, ax = plt.subplots(figsize=(10, 8))
     draw_demes(ax)
-    save_svg("figure3_demes_diagram.svg", fig)
+    save_svg("demes_diagram.svg", fig)

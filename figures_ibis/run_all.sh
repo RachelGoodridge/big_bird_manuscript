@@ -5,17 +5,17 @@ mkdir -p main supplement
 
 # main figures
 python scripts/fig_2_combined.py  # PC(Beak Pointedness) and IBD with the founder over time + IBD tracks along the genome
-python scripts/fig_3_combined.py  # kinship to the founder's descendants + schematic of the populations (illustrations/demes_diagram.py)
-python scripts/fig_4_combined.py  # beak pointedness vs IBD (genome-wide, chr6 LMM) + scandens Manhattan (needs ibd_phenotype_association output)
-python scripts/fig_4v2_combined.py  # alternative figure 4 with the chr. 6 genotype heatmap as panel D (needs chr6_haplotypes output)
+python scripts/fig_3_combined.py  # kinship to the founder's descendants + schematic of the populations (illustrations/scripts/demes_diagram.py)
+python scripts/fig_4_combined.py  # beak pointedness vs IBD (genome-wide, chr6 LMM) + scandens Manhattan + chr. 6 genotype heatmap (needs ibd_phenotype_association and chr6_haplotypes output)
 
 # supplementary figures
 python scripts/supp_beak_shape.py
-python scripts/supp_chr6_traits.py  # needs ibd_phenotype_association output
+python scripts/supp_region_traits.py  # chr6 and chrZ regions (needs ibd_phenotype_association output)
 python scripts/supp_relative_abundance.py
 python scripts/supp_anc_con.py
 python scripts/supp_ideogram.py
 python scripts/supp_frac_founder_genome.py
+python scripts/supp_founder_chrZ.py  # chrZ vs autosomal IBD with the founder for every bird with IBD
 python scripts/supp_kinship_top_scandens.py
 python scripts/supp_ibd_length_over_time.py
 python scripts/supp_allometry.py

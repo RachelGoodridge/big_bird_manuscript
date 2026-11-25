@@ -3,7 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 mkdir -p dataset plink
 
-FULL_VCF=/local/storage/all_birds_highcov_lowcov/autosomes_2022chrZ_all_highcov_lowcov_phased.vcf.gz
+FULL_VCF=/local/storage/all_birds_highcov_lowcov/autosomes_chrZ_all_highcov_lowcov.vcf.gz
 SAMPLES=dataset/Daphne_birds_for_ibis.txt
 SNPS=dataset/downsampled_snps.tsv.gz
 NEW_VCF=dataset/Daphne_birds_downsampled

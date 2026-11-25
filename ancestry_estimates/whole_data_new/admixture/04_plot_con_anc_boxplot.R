@@ -12,21 +12,11 @@ con_col <- "V2"
 print(paste("plotting K =", k))
 
 # get all the Daphne fortis/scandens records from the master spreadsheet
-records <- read.csv("/local/storage/all_birds_highcov_lowcov/Finch_Database_V2.csv", header = TRUE, fill = TRUE, na.strings = c("", "NA", "XX"), stringsAsFactors = FALSE)
-records <- records[!duplicated(records$meaningful.unique),]  # remove duplicates (probably they are all re-captures)
-
-# update the newest lineage classifications (as in 02_plot_admixture.R), so A line / B line / Big Birds aren't counted as fortis
-bbs_lines <- read.csv("/local/storage/BigBirds/BigBirds.csv")
-bbs_lines <- bbs_lines[!duplicated(bbs_lines$meaningful.unique),]
-records$Species <- coalesce(bbs_lines$lineage[match(records$meaningful.unique, bbs_lines$meaningful.unique)], records$Species)
-
-# correct the species for an individual (before keeping only fortis / scandens)
-records <- records |> mutate(Species = if_else(meaningful.unique == "01Dap21269", "magnirostris", Species))
-records <- records %>% filter(Island == "Daphne", Species %in% c("fortis", "scandens"))
-
-# first year alive: the earliest of year born, first year seen, and earliest year recorded (last year seen if none are known), as in 02_plot_admixture.R
-records <- records %>% mutate(start = coalesce(pmin(Year.born, First.year, First.year.min, na.rm = TRUE), Last.year), end = coalesce(Last.year, start)) %>%
-  select(ind = meaningful.unique, Species, start, end)
+# (one row per bird, with the newest lineage classifications, so A line / B line / Big Birds aren't counted as fortis, the species corrections,
+# and the first / last years alive; see ../../master.R)
+source("../../master.R")
+records <- load_master() %>% filter(Island == "Daphne", Species %in% c("fortis", "scandens")) %>%
+  select(ind = meaningful.unique, Species, start = year, end = last.year)
 
 # add a column for conirostris ancestry
 data <- read.table(paste0("finches.", k, ".Q"))
@@ -39,7 +29,7 @@ species_labels <- function(x) parse(text = paste0("italic('G. ", x, "')"))
 species_colors <- c(fortis = "dodgerblue2", scandens = "seagreen3")
 
 # one row per individual per year alive
-df_expanded <- records %>% rowwise() %>% mutate(year = list(start:end)) %>% unnest(year)
+df_expanded <- records %>% rowwise() %>% mutate(year = list(start:end)) %>% unnest(year) %>% filter(!year %in% unsampled_years())  # no fieldwork
 box_data <- df_expanded %>% rename(value = con_anc) %>% filter(year >= 1983)
 
 ########################## BOX PLOT ##########################

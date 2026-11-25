@@ -6,7 +6,7 @@ from illustration_common import COLOR_MAP, save_svg, set_theme, tint
 from ibis_common import species_label
 from demes_diagram import A_LINE_START, B_LINE_START, BIG_BIRDS_START, END, FADE_START, FOUNDER_YEARS
 
-# timeline of the Big Bird lineage (an alternative figure 1B, a simplified figure 3C): the founder started the A line (with a hybrid; later absorbed
+# timeline of the Big Bird lineage (figure 1B, a simplified figure 3C): the founder started the A line (with a hybrid; later absorbed
 # into G. fortis) and the B line (with a G. fortis), and the B line became the reproductively isolated Big Birds, whose fate is unknown.
 # Time runs downward. Horizontal positions are in inches, vertical ones in years
 
@@ -105,4 +105,4 @@ if __name__ == "__main__":
     set_theme()
     fig = plt.figure(figsize=SIZE)
     draw_timeline(fig.add_axes([0, 0, 1, 1]))
-    save_svg("figure1_timeline.svg", fig)
+    save_svg("founder_timeline.svg", fig)

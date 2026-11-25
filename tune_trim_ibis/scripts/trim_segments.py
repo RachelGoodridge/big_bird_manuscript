@@ -1,5 +1,5 @@
 import pandas as pd
-from common import count_snps, high_coverage_regions, load_master, negative_controls, read_bim, subtract_regions, write_bed
+from common import count_snps, database_sex, high_coverage_regions, load_chr_map, load_master, negative_controls, read_bim, subtract_regions, write_bed
 
 # get all segments shared with the founder and the negative controls in this IBIS run
 seg = pd.read_pickle("output/seg_all_founder.pkl")
@@ -11,10 +11,17 @@ neg_seg = seg[seg["ind"].isin(neg_ids)]
 sorted_seg = neg_seg.sort_values(by=["ind", "chrom", "phys_start_pos"])
 assert not (sorted_seg["phys_start_pos"] <= sorted_seg.groupby(["ind", "chrom"])["phys_end_pos"].shift()).any()
 
-# exclude regions where more than 5% of negative controls share IBD with the founder (likely false positives)
-exclude = high_coverage_regions(neg_seg, 0.05 * len(neg_ids))
+# exclude regions where more than 5% of negative controls share IBD with the founder (likely false positives). On chrZ only the male negative
+# controls count (5% of the males): female chrZ is hemizygous and much of it is missing, so the males are the comparable controls there
+chrz = next(code for code, name in load_chr_map().items() if name == "Z")
+master = load_master()
+male_ids = set(master.loc[database_sex(master) == 0, "meaningful.unique"]) & neg_ids
+autosome_exclude = high_coverage_regions(neg_seg[neg_seg["chrom"] != chrz], 0.05 * len(neg_ids))
+chrz_exclude = high_coverage_regions(neg_seg[(neg_seg["chrom"] == chrz) & neg_seg["ind"].isin(male_ids)], 0.05 * len(male_ids))
+exclude = pd.concat([autosome_exclude, chrz_exclude], ignore_index=True)
 write_bed(exclude, "trimming/exclude.bed")
-print(f"excluding {len(exclude)} regions shared with more than {0.05 * len(neg_ids):g} of {len(neg_ids)} negative controls")
+print(f"excluding {len(autosome_exclude)} autosomal regions shared with more than {0.05 * len(neg_ids):g} of {len(neg_ids)} negative controls")
+print(f"excluding {len(chrz_exclude)} chrZ regions shared with more than {0.05 * len(male_ids):g} of {len(male_ids)} male negative controls")
 
 # trim the segments of birds sharing more IBD with the founder than any negative control (sorted by chromosome and position)
 seg = pd.read_pickle("output/seg_founder_neg_max_error.pkl")

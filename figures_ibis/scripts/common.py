@@ -28,7 +28,7 @@ ASSOCIATION = f"{REPO}/ibd_phenotype_association"  # LOCO GRMs and the IBD-pheno
 _spec = importlib.util.spec_from_file_location("ibis_common", f"{IBIS}/scripts/common.py")
 sys.modules["ibis_common"] = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(sys.modules["ibis_common"])
-from ibis_common import COLOR_MAP, DESCENDANT_LINEAGES, FOUNDER, load_chr_map, load_master, ibd_label, negative_controls, read_bim, set_plot_theme, species_label
+from ibis_common import COLOR_MAP, DESCENDANT_LINEAGES, FOUNDER, UNSAMPLED_YEARS, load_chr_map, load_master, ibd_label, negative_controls, read_bim, set_plot_theme, species_label
 
 # axis label for the fraction of SNPs in IBD with the founder
 IBD_LABEL = ibd_label("Proportion of SNPs in IBD")
@@ -47,6 +47,24 @@ def load_bim():
 def load_chromosomes():
     """Map from the integer chromosome codes used by IBIS to chromosome names (without "chr")."""
     return load_chr_map(f"{IBIS}/dataset/chr_map.txt")
+
+
+# birds with more than this fraction of chrZ missing (females whose low coverage, hemizygous chrZ calls were set to missing) are left out of
+# everything on chrZ (its association windows, the chrZ region test, and the chrZ vs autosomal IBD plot); they are kept for the autosomes
+MAX_CHRZ_MISSING = 0.05
+
+
+def chrz_missing_birds():
+    """The birds with more than MAX_CHRZ_MISSING of the chrZ SNPs of the IBIS dataset missing (plink .bed: SNP-major, 2 bits per bird, 01 =
+    missing)."""
+    prefix = f"{IBIS}/plink/dataset"
+    fam = np.loadtxt(f"{prefix}.fam", dtype=str, usecols=1)
+    snp_bytes = (len(fam) + 3) // 4
+    chrz = next(code for code, name in load_chromosomes().items() if name == "Z")
+    z_rows = np.flatnonzero((load_bim()["chrom"] == chrz).to_numpy())
+    raw = np.fromfile(f"{prefix}.bed", dtype=np.uint8, offset=3).reshape(-1, snp_bytes)[z_rows]
+    codes = np.stack([(raw >> shift) & 3 for shift in (0, 2, 4, 6)], axis=2).reshape(len(z_rows), -1)[:, :len(fam)]
+    return set(fam[(codes == 1).mean(axis=0) > MAX_CHRZ_MISSING])
 
 
 def load_trimmed_segments():
@@ -74,8 +92,9 @@ def add_bird_info(df, master, col="ind"):
 
 
 def expand_years_alive(df):
-    """One row per year each bird was alive (Year_alive)."""
-    return df.assign(Year_alive=df.apply(lambda row: range(int(row.Year), int(row.Last_Year) + 1), axis=1)).explode("Year_alive")
+    """One row per year each bird was alive (Year_alive), leaving out the years without fieldwork (UNSAMPLED_YEARS)."""
+    alive = df.assign(Year_alive=df.apply(lambda row: range(int(row.Year), int(row.Last_Year) + 1), axis=1)).explode("Year_alive")
+    return alive[~alive["Year_alive"].isin(UNSAMPLED_YEARS)]
 
 
 def founder_ibd_per_bird(master):
@@ -117,12 +136,12 @@ def plot_ibd_over_time(axes, birds, summary, point_scale=1, line_scale=1, bird_p
     ax_a.set_ylim(-0.02, 1.0)
 
     # (b) average lines and (c) carrier frequency
-    for ax, y_col, y_label, y_lim in [(ax_b, "fraction_snps_ibd_mean", MEAN_IBD_LABEL, (-0.002, 0.077)),
-                                      (ax_c, "ibd_fraction", ibd_label("IBD Carrier Frequency"), (-0.02, 0.77))]:
+    for ax, y_col, y_label in [(ax_b, "fraction_snps_ibd_mean", MEAN_IBD_LABEL), (ax_c, "ibd_fraction", ibd_label("IBD Carrier Frequency"))]:
         sns.lineplot(x="Year", y=y_col, hue="Species", palette=COLOR_MAP, data=summary, linewidth=1.5 * line_scale, ax=ax, zorder=2)
         sns.scatterplot(x="Year", y=y_col, hue="Species", palette=COLOR_MAP, edgecolor="none", data=summary, s=25 * point_scale, ax=ax, zorder=3, legend=False)
         ax.set_ylabel(y_label)
-        ax.set_ylim(*y_lim)
+        y_max = summary[y_col].max() * 1.05  # room above the highest point, and the same small margin below zero
+        ax.set_ylim(-0.026 * y_max, y_max)
 
     for ax in axes:
         format_year_axis(ax)
@@ -162,7 +181,7 @@ def load_measured_fortis_scandens(master):
     return add_bird_info(birds, master)
 
 
-def yearly_trait_summary(birds, traits, min_birds=15):
+def yearly_trait_summary(birds, traits, min_birds=20):
     """Per year and species, counting each bird in every year it was alive: mean, sd, coefficient of variation ((sd / mean) * 100,
     as in Grant & Grant) and a point size for the number of birds. Years with fewer than min_birds birds of a species are dropped."""
     alive = expand_years_alive(birds)
@@ -441,10 +460,10 @@ def add_freq_colorbar(fig, rect, cmap, vmax, label=ibd_label("IBD frequency"), f
     return cb
 
 
-def plot_ibd_track(fig, ax, profiles, years, chr_dict, chrom_lengths, vmax, bin_size=0.1, fontsize=15, combine_from="21"):
+def plot_ibd_track(fig, ax, profiles, years, chr_dict, chrom_lengths, vmax, bin_size=0.1, fontsize=15, combine=(("13", "15"), ("17", "28"))):
     """Manhattan-style tracks of IBD segment frequency: chromosomes laid end to end, one track per species and year
     (fortis then scandens, years in the given order), colored by frequency on a 0 to vmax scale (gray where no IBD).
-    Chromosomes from combine_from onwards share one x tick label."""
+    Each (first, last) run of chromosomes in combine shares one x tick label."""
     chroms_ordered = list(chr_dict.keys())
     ax.grid(False)
     ax.set_facecolor("white")
@@ -498,14 +517,15 @@ def plot_ibd_track(fig, ax, profiles, years, chr_dict, chrom_lengths, vmax, bin_
     ax.set_xlim(0, total_genome_mb)
     ax.set_ylim(0, (n_rows - 1) * row_pitch + track_height)
 
-    # the tail of small chromosomes is too narrow for separate labels, so they are combined into one tick
-    split_idx = [chr_dict[c] for c in chroms_ordered].index(combine_from)
-    individual_chroms = chroms_ordered[:split_idx]
-    combined_chroms = chroms_ordered[split_idx:]
-    combined_x0 = chrom_offset[combined_chroms[0]]
-    combined_x1 = chrom_offset[combined_chroms[-1]] + chrom_lengths[combined_chroms[-1]]
-    ax.set_xticks([chrom_offset[c] + chrom_lengths[c] / 2 for c in individual_chroms] + [(combined_x0 + combined_x1) / 2])
-    ax.set_xticklabels([str(chr_dict[c]) for c in individual_chroms] + [f"{combine_from}-28, LGE22"], fontsize=fontsize)
+    # runs of small chromosomes too narrow for separate labels share one tick (e.g. "11-15"), centered under them; the others have their own
+    names = [str(chr_dict[c]) for c in chroms_ordered]
+    groups = [[c] for c in chroms_ordered]
+    for first, last in combine:
+        i, j = names.index(first), names.index(last)
+        groups = [g for g in groups if g[0] not in chroms_ordered[i:j + 1]] + [chroms_ordered[i:j + 1]]
+    groups.sort(key=lambda g: chroms_ordered.index(g[0]))
+    ax.set_xticks([(chrom_offset[g[0]] + chrom_offset[g[-1]] + chrom_lengths[g[-1]]) / 2 for g in groups])
+    ax.set_xticklabels([str(chr_dict[g[0]]) if len(g) == 1 else f"{chr_dict[g[0]]}-{chr_dict[g[-1]]}" for g in groups], fontsize=fontsize)
     ax.set_xlabel("Chromosome", fontsize=fontsize + 4, labelpad=8)
 
     # unlabeled minor ticks: one centered in each inter-chromosome gap, plus one at the very start and end of the genome
@@ -598,6 +618,15 @@ def load_loco_grm(spp, chrom):
     """GEMMA centered relatedness matrix of a species' birds built without one chromosome (IBIS chromosome code), and the bird IDs in its order."""
     ids = pd.read_csv(f"{ASSOCIATION}/grm/{spp}/plink.fam", sep=r"\s+", header=None, usecols=[1], dtype=str)[1].to_list()
     return np.loadtxt(f"{ASSOCIATION}/grm/{spp}/loco_chr{chrom}.cXX.txt"), ids
+
+
+def drop_chrz_missing(K, ids, chrom):
+    """For chrZ (IBIS chromosome code), a relatedness matrix and its bird IDs (from load_loco_grm) without the birds with much of chrZ missing
+    (chrz_missing_birds); for the autosomes, both unchanged."""
+    if load_chromosomes()[chrom] != "Z":
+        return K, ids
+    keep = ~np.isin(ids, list(chrz_missing_birds()))
+    return K[np.ix_(keep, keep)], [i for i, k in zip(ids, keep) if k]
 
 
 def eigen_grm(K):

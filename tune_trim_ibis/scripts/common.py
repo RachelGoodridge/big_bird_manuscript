@@ -11,7 +11,9 @@ VCF_SAMPLES = "/local/storage/all_birds_highcov_lowcov/samples.txt"
 
 # birds whose database species is wrong: bird -> corrected species
 SPECIES_CORRECTIONS = {
-    "01Dap21269": "magnirostris",  # recorded as fortis, but magnirostris ancestry and beak size
+    "01Dap21269": "Unknown",       # suspected immigrant from Santa Cruz, excluded by Enbody et al. (2023) (recorded as fortis, magnirostris-like)
+    "01Dap19746": "Unknown",       # entries disagree (Unknown / fortis); the notes say it should not be counted as fortis
+    "01Dap21274": "Unknown",       # suspected immigrant from Santa Cruz, excluded by Enbody et al. (2023)
 }
 
 # birds measured as nestlings, whose measurements are not adult sizes: they stay in every analysis, but their measurements are set to missing
@@ -20,6 +22,10 @@ NESTLING_MEASUREMENTS = {
     "04Dap19450",  # Big Bird
     "04Dap19451",  # Big Bird
 }
+
+# years without fieldwork on Daphne (no birds were sampled): birds alive across them (one scandens, caught in 2010-2011 and again in 2022) are
+# not counted in them, so no yearly summary or plot has these years
+UNSAMPLED_YEARS = list(range(2013, 2022))
 
 # the founder of the Big Bird lineage
 FOUNDER = "04Dap5110"
@@ -63,20 +69,49 @@ def set_plot_theme():
     plt.rcParams.update(PLOT_THEME)
 
 
+YEAR_COLUMNS = ["Year.born", "First.year", "First.year.min", "Last.year"]
+UNKNOWN_SPECIES = {"Unknown", "unknown"}  # treated as missing when a bird's entries are combined
+
+
+def database_sex(master):
+    """The consensus sex, else the genetic sex, else the field sex code (1 = male, 2 = female), coded male = 0 and female = 1 (missing if
+    none)."""
+    field = master["Sex"].map({1: "Male", 2: "Female"})
+    return master["sex.consensus"].fillna(master["genetic.sex"]).fillna(field).map({"Male": 0, "Female": 1})
+
+
+def combine_entries(master):
+    """One row per bird from its entries (some birds have several, e.g. caught again or sampled twice): first and last years alive are the
+    earliest and latest of all its years (YEAR_COLUMNS), measurements the mean over the entries that have them, and every other column its
+    first non-missing value (a known species before an unknown one). Birds whose entries disagree on island, species (unknown aside, and
+    birds in SPECIES_CORRECTIONS) or sex are printed."""
+    master = master.assign(sex=database_sex(master), _unknown=master["Species"].isin(UNKNOWN_SPECIES))
+    entries = master.groupby("meaningful.unique", sort=False)
+
+    known = master.assign(Species=master["Species"].where(~master["_unknown"] & ~master["meaningful.unique"].isin(SPECIES_CORRECTIONS)))
+    conflicts = known.groupby("meaningful.unique")[["Island", "Species", "sex"]].nunique() > 1
+    for column in conflicts:
+        birds = conflicts.index[conflicts[column]]
+        if len(birds):
+            print(f"load_master: entries disagree on {column} for", ", ".join(f"{b} ({'/'.join(map(str, known.loc[known['meaningful.unique'] == b, column].dropna().unique()))})" for b in birds))
+
+    years = master[YEAR_COLUMNS]
+    combined = master.sort_values("_unknown", kind="stable").groupby("meaningful.unique", sort=False).first()
+    combined = combined.reindex(entries.size().index)  # the birds in their original order
+    combined["year"] = years.min(axis=1).groupby(master["meaningful.unique"]).min()
+    combined["last.year"] = years.max(axis=1).groupby(master["meaningful.unique"]).max()
+    combined[MEASUREMENTS] = entries[MEASUREMENTS].mean()
+    return combined.drop(columns="_unknown").reset_index()
+
+
 def load_master(island="Daphne"):
-    """Birds from the master database (one island, or all if None) with missing first years filled, sex coded 0 / 1, and the newest lineage classifications."""
-    master = pd.read_csv(MASTER_DB)
-    master.drop_duplicates(subset=["meaningful.unique"], inplace=True)
+    """Birds from the master database (one island, or all if None), one row per bird (see combine_entries), with first / last years alive,
+    sex coded 0 / 1, and the newest lineage classifications."""
+    # first year alive: the earliest of the bird's years (year born, first year seen, earliest year recorded, last year seen) over all its
+    # entries; last year alive: the latest of them; sex: see database_sex
+    master = combine_entries(pd.read_csv(MASTER_DB))
     if island is not None:
         master = master[master["Island"] == island].copy()
-
-    # first year alive: the earliest year the bird is known to have been alive (year born, first year seen, or earliest year recorded),
-    # or the last year seen if none are known; last year alive: the last year seen, or the first year alive if unknown
-    master["year"] = master[["Year.born", "First.year", "First.year.min"]].min(axis=1).fillna(master["Last.year"])
-    master["last.year"] = master["Last.year"].fillna(master["year"])
-
-    # sex: the consensus sex, or the field sex code (1 = male, 2 = female) if unknown, coded male = 0 and female = 1 (missing if neither)
-    master["sex"] = master["sex.consensus"].fillna(master["Sex"].map({1: "Male", 2: "Female"})).map({"Male": 0, "Female": 1})
 
     # update the newest lineage classifications and add generations from the founder
     bbs_lines = pd.read_csv(BIG_BIRDS)

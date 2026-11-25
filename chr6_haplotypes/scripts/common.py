@@ -114,7 +114,7 @@ def save_figure(path, fig=None):
 ############################ heatmap of the genotypes in the FST peaks ############################
 # every bird's genotype (copies of the donor allele) at the SNPs in the FST peaks, the rows ordered by a tree of all the birds (UPGMA: average
 # linkage, cityblock distance on the plotted SNPs), drawn at the side with each bird's group. Drawn by plot_peak_heatmap.py and, as a panel,
-# by figures_ibis/scripts/fig_4v2_combined.py
+# by figures_ibis/scripts/fig_4_combined.py
 HEATMAP_SNPS = "diagnostic"  # "diagnostic": SNPs telling the donors (conirostris + magnirostris) and scandens (no IBD) apart, or "pruned": the LD-pruned SNPs
 HEATMAP_GROUPS = ["magnirostris_dap", "conirostris_esp", "founder", "scandens_ibd", "scandens_no_ibd"]
 FOUNDER_ROWS = 2  # the founder's single row drawn this many rows tall, so it can be seen

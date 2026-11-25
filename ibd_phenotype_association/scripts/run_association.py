@@ -8,8 +8,9 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 from statsmodels.stats.multitest import multipletests
-from common import (COVARIATES, FDR, FOCAL_SPECIES, MIN_PER_SEX, MIN_TEST, RESULTS, TRAITS, WINDOW_COVERAGE, eigen_grm, lmm_lrt, load_bim, load_birds,
-                    load_chromosomes, load_loco_grm, load_trimmed_segments, loco_ibd_fractions, make_windows, window_coverage)
+from common import (COVARIATES, FDR, FOCAL_SPECIES, MIN_PER_SEX, MIN_TEST, RESULTS, TRAITS, WINDOW_COVERAGE, drop_chrz_missing, eigen_grm,
+                    lmm_lrt, load_bim, load_birds, load_chromosomes, load_loco_grm, load_trimmed_segments, loco_ibd_fractions, make_windows,
+                    window_coverage)
 
 N_WORKERS = 30  # species x chromosome jobs run at once
 
@@ -37,6 +38,7 @@ def run_chromosome(job):
     K, grm_ids = load_loco_grm(spp, chrom)
     df = birds[spp].set_index("ind")
     assert set(grm_ids) == set(df.index), f"{spp} birds differ from the GRM birds (rerun 01_make_grm.sh)"
+    K, grm_ids = drop_chrz_missing(K, grm_ids, chrom)  # on chrZ, without the birds with much of it missing (kept for the autosomes)
     df = df.loc[grm_ids]
     df["loco_ibd"] = loco_ibd[chrom].reindex(df.index).fillna(0).to_numpy()
     cov = coverage[coverage["ind"].isin(df.index)]

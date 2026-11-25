@@ -31,7 +31,11 @@ for i, (ax, y_var, y_label) in enumerate(zip(axes, y_vars, y_labels)):
     ax.set_xlabel("Minimum Number of Markers")
     ax.set_ylabel(y_label)
 
+# the legend to the right of the panels, outside them
+handles, labels = axes[0].get_legend_handles_labels()
+axes[0].get_legend().remove()
 plt.tight_layout()
+fig.legend(handles, labels, loc="center left", bbox_to_anchor=(1, 0.5), frameon=False)
 plt.savefig("tuning_plots/markers.png", dpi=450, bbox_inches="tight", pad_inches=0)
 plt.close()
 
@@ -64,7 +68,11 @@ for i, (ax, y_var, y_label) in enumerate(zip(axes, y_vars, y_labels)):
     ax.set_xlabel("Acceptable Error Rate")
     ax.set_ylabel(y_label)
 
+# the legend to the right of the panels, outside them
+handles, labels = axes[0].get_legend_handles_labels()
+axes[0].get_legend().remove()
 plt.tight_layout()
+fig.legend(handles, labels, loc="center left", bbox_to_anchor=(1, 0.5), frameon=False)
 plt.savefig("tuning_plots/error.png", dpi=450, bbox_inches="tight", pad_inches=0)
 plt.close()
 
